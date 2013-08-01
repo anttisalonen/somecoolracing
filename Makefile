@@ -14,9 +14,9 @@ BINDIR       = bin
 
 # Common lib
 
-#COMMONSRCDIR = src/common
-#COMMONLIB = $(COMMONSRCDIR)/libcommon.a
-#COMMONSRCS = $(shell (find $(COMMONSRCDIR) \( -name '*.cpp' -o -name '*.h' \)))
+COMMONSRCDIR = src/common
+COMMONLIB = $(COMMONSRCDIR)/libcommon.a
+COMMONSRCS = $(shell (find $(COMMONSRCDIR) \( -name '*.cpp' -o -name '*.h' \)))
 
 
 # Main binary
