@@ -197,11 +197,39 @@ void test_rigidBody()
 	std::cout << "Finished rigid body test.\n";
 }
 
+
+// Kinetics
+void test_kinetics()
+{
+	Real speed = 0.0;
+	Real displacement = 0.0;
+	Real thrust = 20000.0;
+	Real mass = 10000.0;
+	Real dragCoefficient = 1000.0;
+	Real acceleration = 0.0;
+
+	const Real timeStep = 0.01;
+
+	for(Real time = 0; time < 40.0; time += timeStep) {
+		Real resistance = dragCoefficient * speed;
+		acceleration = (thrust - resistance) / mass;
+		speed += acceleration * timeStep;
+		displacement += speed * timeStep;
+	}
+
+	testReal("Boat speed", speed, 20.0, 0.5);
+	testReal("Boat displacement", displacement, 700, 100.0);
+	testReal("Boat acceleration", acceleration, 0.05, 0.05);
+
+	std::cout << "Finished kinetics test.\n";
+}
+
 int main(void)
 {
 	std::cout << "Hello world!\n";
 
 	test_rigidBody();
+	test_kinetics();
 	return 0;
 }
 
