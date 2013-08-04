@@ -5,9 +5,9 @@
 
 #include "common/Vector2.h"
 
-namespace Abyss {
-	typedef double Real;
+#include "Prereq.h"
 
+namespace Abyss {
 	class Particle {
 		public:
 			Common::Vector2 position;

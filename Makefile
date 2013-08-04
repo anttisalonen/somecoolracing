@@ -24,7 +24,7 @@ COMMONSRCS = $(shell (find $(COMMONSRCDIR) \( -name '*.cpp' -o -name '*.h' \)))
 MAINBINARYBINNAME = somecoolracing
 MAINBINARYBIN     = $(BINDIR)/$(MAINBINARYBINNAME)
 MAINBINARYSRCDIR = src
-MAINBINARYSRCFILES = abyss/Particle.cpp scr/main.cpp
+MAINBINARYSRCFILES = abyss/Particle.cpp abyss/RigidBody.cpp scr/main.cpp
 
 MAINBINARYSRCS = $(addprefix $(MAINBINARYSRCDIR)/, $(MAINBINARYSRCFILES))
 MAINBINARYOBJS = $(MAINBINARYSRCS:.cpp=.o)
