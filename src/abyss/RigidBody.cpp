@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <iostream>
+#include <algorithm>
 
 namespace Abyss {
 	Common::Matrix22 getRotationMatrix(Real orientation)
@@ -263,6 +264,13 @@ namespace Abyss {
 	void World::addBody(RigidBody* b)
 	{
 		mBodyRegistration.push_back(b);
+	}
+
+	void World::removeBody(RigidBody* b)
+	{
+		mBodyRegistration.erase(std::remove(mBodyRegistration.begin(),
+					mBodyRegistration.end(), b),
+				mBodyRegistration.end());
 	}
 
 	void World::startFrame()

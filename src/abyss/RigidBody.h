@@ -135,6 +135,7 @@ namespace Abyss {
 			void startFrame();
 			void runPhysics(Real duration);
 			void addBody(RigidBody* b);
+			void removeBody(RigidBody* b);
 			ForceRegistry* getForceRegistry();
 
 		private:
