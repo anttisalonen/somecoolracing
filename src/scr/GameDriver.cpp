@@ -7,15 +7,17 @@ GameDriver::GameDriver(unsigned int screenWidth, unsigned int screenHeight, cons
 
 bool GameDriver::init()
 {
-	return true;
-}
-
-void GameDriver::render()
-{
+	return mRenderer.init();
 }
 
 void GameDriver::drawFrame()
 {
+	mRenderer.drawFrame(&mWorld);
 }
 
+bool GameDriver::prerenderUpdate(float frameTime)
+{
+	mWorld.updatePhysics(frameTime);
+	return false;
+}
 

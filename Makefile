@@ -23,7 +23,9 @@ MAINBINARYBINNAME = somecoolracing
 MAINBINARYBIN     = $(BINDIR)/$(MAINBINARYBINNAME)
 MAINBINARYSRCDIR = src
 MAINBINARYSRCFILES = abyss/Particle.cpp abyss/RigidBody.cpp \
-		     scr/GameDriver.cpp scr/Game.cpp scr/main.cpp
+		     scr/Car.cpp scr/GameWorld.cpp \
+		     scr/Renderer.cpp scr/GameDriver.cpp scr/Game.cpp \
+		     scr/main.cpp
 
 MAINBINARYSRCS = $(addprefix $(MAINBINARYSRCDIR)/, $(MAINBINARYSRCFILES))
 MAINBINARYOBJS = $(MAINBINARYSRCS:.cpp=.o)
