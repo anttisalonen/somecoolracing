@@ -1,7 +1,8 @@
 #include "GameDriver.h"
 
 GameDriver::GameDriver(unsigned int screenWidth, unsigned int screenHeight, const char* caption)
-	: Driver(screenWidth, screenHeight, caption)
+	: Driver(screenWidth, screenHeight, caption),
+	mRenderer(screenWidth, screenHeight)
 {
 }
 

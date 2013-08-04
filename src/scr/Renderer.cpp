@@ -6,7 +6,10 @@
 #include <fstream>
 #include <sstream>
 
-Renderer::Renderer()
+Renderer::Renderer(int w, int h)
+	: mWidth(w),
+	mHeight(h),
+	mCamPos(-1, -1)
 {
 }
 
@@ -32,21 +35,109 @@ bool Renderer::init()
 
 	glActiveTexture(GL_TEXTURE0);
 
-	//auto carProgram = loadProgram("share/car.vert", "share/car.frag", std::vector());
-	//glUseProgram(carProgram);
+	mCarProgram = loadProgram("share/car.vert", "share/car.frag", {{0, "aPosition"}, {1, "aTexcoord"}});
+	mCameraUniform  = glGetUniformLocation(mCarProgram, "uCamera");
+	mZoomUniform    = glGetUniformLocation(mCarProgram, "uZoom");
+	mRightUniform   = glGetUniformLocation(mCarProgram, "uRight");
+	mTopUniform     = glGetUniformLocation(mCarProgram, "uTop");
+	mTextureUniform = glGetUniformLocation(mCarProgram, "sTexture");
+	glUseProgram(mCarProgram);
 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-	return true;
+	loadTextures();
+	loadCarVBO();
+
+	bool error = false;
+	{
+		GLenum err;
+		while((err = glGetError()) != GL_NO_ERROR) {
+			fprintf(stderr, "GL error 0x%04x\n", err);
+			error = true;
+		}
+	}
+
+	return !error;
+}
+
+void Renderer::loadTextures()
+{
+	mCarTexture = new Common::Texture("share/car.png");
+}
+
+void Renderer::loadCarVBO()
+{
+	GLfloat vertices[] = {1.0f, 0.0f, 0.5f,
+		1.0f, -1.0f, 0.5f,
+		0.0f, 0.0f, 0.5f,
+		0.0f, -1.0f, 0.5f};
+	GLfloat texcoord[] = {1.0f, 0.0f,
+		1.0f, 1.0f,
+		0.0f, 0.0f,
+		0.0f, 1.0f};
+	GLushort indices[] = {0, 2, 1,
+		1, 2, 3};
+
+	glGenBuffers(3, mCarVBO);
+
+	// vertices
+	glBindBuffer(GL_ARRAY_BUFFER, mCarVBO[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	// texcoord
+	glBindBuffer(GL_ARRAY_BUFFER, mCarVBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(texcoord), texcoord, GL_STATIC_DRAW);
+
+	// indices
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mCarVBO[2]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+}
+
+void Renderer::cleanup()
+{
+	delete mCarTexture;
+	glDeleteBuffers(3, mCarVBO);
 }
 
 void Renderer::drawFrame(const GameWorld* w)
 {
+	glViewport(0, 0, mWidth, mHeight);
+	glUniform1f(mRightUniform, mWidth);
+	glUniform1f(mTopUniform, mHeight);
+	glUniform1i(mTextureUniform, 0);
+
 	auto car = w->getCar();
-	std::cout << car->getPosition() << "\n";
+	glUniform1f(mZoomUniform, 0.01f);
+	drawCar(car);
+
+	{
+		GLenum err;
+		while((err = glGetError()) != GL_NO_ERROR) {
+			fprintf(stderr, "GL error 0x%04x\n", err);
+		}
+	}
+
+}
+
+void Renderer::drawCar(const Car* car)
+{
+	auto pos = car->getPosition();
+	float cpx = mCamPos.x + pos.x;
+	float cpy = mCamPos.y - pos.y;
+
+	glBindTexture(GL_TEXTURE_2D, mCarTexture->getTexture());
+	glUniform2f(mCameraUniform, cpx, cpy);
+
+	glBindBuffer(GL_ARRAY_BUFFER, mCarVBO[0]);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glBindBuffer(GL_ARRAY_BUFFER, mCarVBO[1]);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mCarVBO[2]);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
 }
 
 GLuint Renderer::loadShader(const char* src, GLenum type)
@@ -96,11 +187,11 @@ GLuint Renderer::loadProgram(const char* vertfilename, const char* fragfilename,
 	GLuint programobj;
 	GLint linked;
 
-	std::string vshader_src = loadTextFile("share/shader.vert");
+	std::string vshader_src = loadTextFile(vertfilename);
 	if(vshader_src.empty())
 		return 0;
 
-	std::string fshader_src = loadTextFile("share/shader.frag");
+	std::string fshader_src = loadTextFile(fragfilename);
 	if(fshader_src.empty()) {
 		return 0;
 	}
