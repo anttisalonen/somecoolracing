@@ -14,9 +14,15 @@ class GameDriver : public Common::Driver {
 		bool prerenderUpdate(float frameTime) override;
 		void drawFrame() override;
 
+		bool handleKeyDown(float frameTime, SDLKey key) override;
+		bool handleKeyUp(float frameTime, SDLKey key) override;
+
 	private:
 		Renderer mRenderer;
 		GameWorld mWorld;
+
+		float mThrottle = 0.0f;
+		float mBrake = 0.0f;
 };
 
 #endif

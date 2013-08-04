@@ -8,8 +8,10 @@
 class GameWorld {
 	public:
 		GameWorld();
+		~GameWorld();
 		void updatePhysics(float time);
 		const Car* getCar() const;
+		Car* getCar();
 
 	private:
 		Abyss::World mPhysicsWorld;

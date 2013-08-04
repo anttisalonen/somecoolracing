@@ -1,15 +1,23 @@
 #include "GameWorld.h"
 
 GameWorld::GameWorld()
-	: mCar(Car(3.0f, 7.0f))
+	: mCar(3.0f, 7.0f, &mPhysicsWorld)
 {
-	mPhysicsWorld.addBody(mCar.getBody());
+}
+
+GameWorld::~GameWorld()
+{
 }
 
 void GameWorld::updatePhysics(float time)
 {
 	mPhysicsWorld.startFrame();
 	mPhysicsWorld.runPhysics(time);
+}
+
+Car* GameWorld::getCar()
+{
+	return &mCar;
 }
 
 const Car* GameWorld::getCar() const
