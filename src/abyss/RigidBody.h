@@ -57,7 +57,7 @@ namespace Abyss {
 
 	class ForceGenerator {
 		public:
-			~ForceGenerator() { }
+			virtual ~ForceGenerator() { }
 			virtual void updateForce(RigidBody* body, Real duration) = 0;
 	};
 
