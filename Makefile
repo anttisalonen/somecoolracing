@@ -4,10 +4,8 @@ CXXFLAGS ?= -O2 -g3 -Werror
 CXXFLAGS += -std=c++11 -Wall
 
 CXXFLAGS += $(shell sdl-config --cflags)
-
-MAINBINARYLIBS  = $(shell sdl-config --libs) \
-		  -lSDL_image -lSDL_ttf -lGL -lGLEW \
-		  -lboost_serialization -lboost_iostreams
+LDFLAGS  += $(shell sdl-config --libs) \
+		  -lSDL_image -lSDL_ttf -lGL -lGLEW
 
 CXXFLAGS += -Isrc
 BINDIR       = bin
@@ -24,7 +22,8 @@ COMMONSRCS = $(shell (find $(COMMONSRCDIR) \( -name '*.cpp' -o -name '*.h' \)))
 MAINBINARYBINNAME = somecoolracing
 MAINBINARYBIN     = $(BINDIR)/$(MAINBINARYBINNAME)
 MAINBINARYSRCDIR = src
-MAINBINARYSRCFILES = abyss/Particle.cpp abyss/RigidBody.cpp scr/main.cpp
+MAINBINARYSRCFILES = abyss/Particle.cpp abyss/RigidBody.cpp \
+		     scr/GameDriver.cpp scr/Game.cpp scr/main.cpp
 
 MAINBINARYSRCS = $(addprefix $(MAINBINARYSRCDIR)/, $(MAINBINARYSRCFILES))
 MAINBINARYOBJS = $(MAINBINARYSRCS:.cpp=.o)

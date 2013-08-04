@@ -2,10 +2,13 @@
 #include <vector>
 #include <cassert>
 #include <algorithm>
+#include <cstring>
 
 #include "common/Vector2.h"
 
 #include "abyss/RigidBody.h"
+
+#include "Game.h"
 
 void test_abyss_rigid_bodies()
 {
@@ -47,9 +50,23 @@ void test_abyss_rigid_bodies()
 	}
 }
 
-int main(void)
+int run_game()
 {
-	test_abyss_rigid_bodies();
+	Game g;
+	g.run();
+	return 0;
+}
+
+int main(int argc, char** argv)
+{
+	for(int i = 0; i < argc; i++) {
+		if(!strcmp(argv[i], "-t")) {
+			test_abyss_rigid_bodies();
+			return 0;
+		}
+	}
+
+	run_game();
 
 	return 0;
 }
