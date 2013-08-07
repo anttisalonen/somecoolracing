@@ -37,6 +37,7 @@ class Renderer {
 		int mHeight;
 		Common::Vector2 mCamPos;
 		GLuint mCameraUniform;
+		GLuint mOrientationUniform;
 		GLuint mZoomUniform;
 		GLuint mRightUniform;
 		GLuint mTopUniform;

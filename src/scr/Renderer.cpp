@@ -37,6 +37,7 @@ bool Renderer::init()
 
 	mCarProgram = loadProgram("share/car.vert", "share/car.frag", {{0, "aPosition"}, {1, "aTexcoord"}});
 	mCameraUniform  = glGetUniformLocation(mCarProgram, "uCamera");
+	mOrientationUniform  = glGetUniformLocation(mCarProgram, "uOrientation");
 	mZoomUniform    = glGetUniformLocation(mCarProgram, "uZoom");
 	mRightUniform   = glGetUniformLocation(mCarProgram, "uRight");
 	mTopUniform     = glGetUniformLocation(mCarProgram, "uTop");
@@ -70,10 +71,10 @@ void Renderer::loadTextures()
 
 void Renderer::loadCarVBO()
 {
-	GLfloat vertices[] = {1.0f, 0.0f, 0.5f,
-		1.0f, -1.0f, 0.5f,
-		0.0f, 0.0f, 0.5f,
-		0.0f, -1.0f, 0.5f};
+	GLfloat vertices[] = {0.5f, 0.5f,
+		0.5f, -0.5f,
+		-0.5f, 0.5f,
+		-0.5f, -0.5f};
 	GLfloat texcoord[] = {1.0f, 0.0f,
 		1.0f, 1.0f,
 		0.0f, 0.0f,
@@ -125,14 +126,16 @@ void Renderer::drawFrame(const GameWorld* w)
 void Renderer::drawCar(const Car* car)
 {
 	auto pos = car->getPosition();
+	auto orient = car->getOrientation();
 	float cpx = mCamPos.x + pos.x;
-	float cpy = mCamPos.y - pos.y;
+	float cpy = mCamPos.y + pos.y;
 
 	glBindTexture(GL_TEXTURE_2D, mCarTexture->getTexture());
 	glUniform2f(mCameraUniform, cpx, cpy);
+	glUniform1f(mOrientationUniform, orient);
 
 	glBindBuffer(GL_ARRAY_BUFFER, mCarVBO[0]);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 	glBindBuffer(GL_ARRAY_BUFFER, mCarVBO[1]);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 

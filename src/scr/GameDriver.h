@@ -23,6 +23,7 @@ class GameDriver : public Common::Driver {
 
 		float mThrottle = 0.0f;
 		float mBrake = 0.0f;
+		float mSteering = 0.0f;
 };
 
 #endif

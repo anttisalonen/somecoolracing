@@ -19,8 +19,11 @@ void GameDriver::drawFrame()
 bool GameDriver::prerenderUpdate(float frameTime)
 {
 	auto car = mWorld.getCar();
-	car->setThrottle(mThrottle);
-	car->setBrake(mBrake);
+	if(!mBrake)
+		car->setThrottle(mThrottle);
+	if(!mThrottle)
+		car->setBrake(mBrake);
+	car->setSteering(mSteering);
 	mWorld.updatePhysics(frameTime);
 	return false;
 }
@@ -39,6 +42,18 @@ bool GameDriver::handleKeyDown(float frameTime, SDLKey key)
 			mBrake = 1.0f;
 			break;
 
+		case SDLK_a:
+			mSteering = -1.0f;
+			break;
+
+		case SDLK_d:
+			mSteering = 1.0f;
+			break;
+
+		case SDLK_SPACE:
+			std::cout << mWorld.getCar()->getSpeed() << "\n";
+			break;
+
 		default:
 			break;
 	}
@@ -55,6 +70,14 @@ bool GameDriver::handleKeyUp(float frameTime, SDLKey key)
 
 		case SDLK_s:
 			mBrake = 0.0f;
+			break;
+
+		case SDLK_a:
+			mSteering = 0.0f;
+			break;
+
+		case SDLK_d:
+			mSteering = 0.0f;
 			break;
 
 		default:

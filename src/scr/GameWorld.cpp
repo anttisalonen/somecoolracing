@@ -1,7 +1,7 @@
 #include "GameWorld.h"
 
 GameWorld::GameWorld()
-	: mCar(3.0f, 7.0f, &mPhysicsWorld)
+	: mCar(1.7f, 4.2f, &mPhysicsWorld)
 {
 }
 
