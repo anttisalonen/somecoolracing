@@ -4,18 +4,13 @@
 #include <iostream>
 #include <algorithm>
 
-namespace Abyss {
-	Common::Matrix22 getRotationMatrix(Real orientation)
-	{
-		Real s = sin(orientation);
-		Real c = cos(orientation);
-		return Common::Matrix22(c, s, -s, c);
-	}
+#include "common/Math.h"
 
+namespace Abyss {
 	Common::Matrix22 getRotationMatrix(const Common::Vector2& orientation)
 	{
 		assert(fabs(orientation.length() - 1.0) < 0.001);
-		Real theta = atan2(orientation.y, orientation.x);
+		Real theta = atan2(orientation.x, orientation.y);
 		Real s = sin(theta);
 		Real c = cos(theta);
 		return Common::Matrix22(c, s, -s, c);
@@ -34,19 +29,6 @@ namespace Abyss {
 		// TODO: verify this
 		return rotationMatrix.inverse() * world - pos;
 	}
-
-#if 0
-	Common::Vector2 localToWorld(const Common::Vector2& local, const Common::Matrix22& transform)
-	{
-		return transform * local;
-	}
-
-	Common::Vector2 worldToLocal(const Common::Vector2& world, const Common::Matrix22& transform)
-	{
-		Matrix22 inv = transform.inverse();
-		return inv * world;
-	}
-#endif
 
 	void RigidBody::addForce(const Common::Vector2& force)
 	{
@@ -70,9 +52,7 @@ namespace Abyss {
 		rotation *= pow(angularDamping, duration);
 
 		position += velocity * duration;
-		orientation += rotation * duration;
-
-		orientation = fmod(orientation, 2.0 * 3.1415926535);
+		orientation = Common::Math::rotate2D(orientation, rotation * duration);
 
 		calculateDerivedData();
 		clearAccumulators();
@@ -95,6 +75,12 @@ namespace Abyss {
 		inverseMass = 1.0 / m;
 	}
 
+	void RigidBody::setInertiaTensor(Real i)
+	{
+		assert(i);
+		inverseInertiaTensor = 1.0 / i;
+	}
+
 	void RigidBody::clearAccumulators()
 	{
 		forceAccum.zero();
@@ -109,11 +95,17 @@ namespace Abyss {
 
 	void RigidBody::addForceAtPoint(const Common::Vector2& force, const Common::Vector2& worldpoint)
 	{
-		Common::Vector2 pt = worldpoint;
-		pt -= position;
+		assert(!isnan(force.x));
+		assert(!isnan(force.y));
+		assert(!isnan(worldpoint.x));
+		assert(!isnan(worldpoint.y));
 
 		forceAccum += force;
-		torqueAccum += pt.length() * force.length();
+
+		Common::Vector2 momentArm = worldpoint - position;
+		Real torque = momentArm.cross2d(force);
+
+		torqueAccum += torque;
 	}
 
 	void RigidBody::calculateDerivedData()
@@ -123,12 +115,17 @@ namespace Abyss {
 
 	void RigidBody::calculateRotationMatrix()
 	{
-		rotationMatrix = getRotationMatrix(orientation);
+		rotationMatrix = Abyss::getRotationMatrix(orientation);
 	}
 
 	Common::Vector2 RigidBody::getPointInWorldSpace(const Common::Vector2& p) const
 	{
 		return localToWorld(p, position, rotationMatrix);
+	}
+
+	const Common::Matrix22& RigidBody::getRotationMatrix() const
+	{
+		return rotationMatrix;
 	}
 
 	Gravity::Gravity(const Common::Vector2& gravity)

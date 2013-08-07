@@ -11,7 +11,6 @@
 #include "Prereq.h"
 
 namespace Abyss {
-	Common::Matrix22 getRotationMatrix(Real orientation);
 	Common::Matrix22 getRotationMatrix(const Common::Vector2& orientation);
 	Common::Vector2 localToWorld(const Common::Vector2& local, const Common::Vector2& pos,
 			const Common::Matrix22& rotationMatrix);
@@ -29,15 +28,17 @@ namespace Abyss {
 			bool hasFiniteMass() const;
 			Real getMass() const;
 			void setMass(Real m);
+			void setInertiaTensor(Real i);
 
 			Common::Vector2 getPointInWorldSpace(const Common::Vector2& p) const;
+			const Common::Matrix22& getRotationMatrix() const;
 			void calculateDerivedData();
 			void clearAccumulators();
 
 			Real inverseMass = 0.0;
 			Real inverseInertiaTensor = 0.0;
 			Common::Vector2 position;
-			Real orientation = 0.0;
+			Common::Vector2 orientation = Common::Vector2(1.0, 0.0);
 
 			Common::Vector2 velocity;
 			Real rotation;
