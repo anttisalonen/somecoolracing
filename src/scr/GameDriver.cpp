@@ -25,6 +25,8 @@ bool GameDriver::prerenderUpdate(float frameTime)
 		car->setBrake(mBrake);
 	car->setSteering(mSteering);
 	mWorld.updatePhysics(frameTime);
+	mZoom += mZoomSpeed * frameTime * 0.1f;
+	mZoom = mRenderer.setZoom(mZoom);
 	return false;
 }
 
@@ -54,6 +56,16 @@ bool GameDriver::handleKeyDown(float frameTime, SDLKey key)
 			std::cout << mWorld.getCar()->getSpeed() << "\n";
 			break;
 
+		case SDLK_PLUS:
+		case SDLK_KP_PLUS:
+			mZoomSpeed = 1.0f;
+			break;
+
+		case SDLK_MINUS:
+		case SDLK_KP_MINUS:
+			mZoomSpeed = -1.0f;
+			break;
+
 		default:
 			break;
 	}
@@ -78,6 +90,13 @@ bool GameDriver::handleKeyUp(float frameTime, SDLKey key)
 
 		case SDLK_d:
 			mSteering = 0.0f;
+			break;
+
+		case SDLK_PLUS:
+		case SDLK_KP_PLUS:
+		case SDLK_MINUS:
+		case SDLK_KP_MINUS:
+			mZoomSpeed = 0.0f;
 			break;
 
 		default:

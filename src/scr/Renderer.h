@@ -21,6 +21,8 @@ class Renderer {
 		void drawFrame(const GameWorld* w);
 		void cleanup();
 
+		float setZoom(float z);
+
 	private:
 		bool initGL();
 		void loadTextures();
@@ -57,6 +59,8 @@ class Renderer {
 		GLuint mTrackVBO[2];
 		unsigned int mTrackElemCount = 0;
 		GLuint mGrassVBO[3];
+
+		float mZoom = 0.01f;
 };
 
 #endif

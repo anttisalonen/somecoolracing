@@ -1,5 +1,7 @@
 #include "Renderer.h"
 
+#include "common/Math.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -62,6 +64,12 @@ bool Renderer::init()
 	}
 
 	return !error;
+}
+
+float Renderer::setZoom(float z)
+{
+	mZoom = Common::clamp(0.01f, z, 1.0f);
+	return mZoom;
 }
 
 void Renderer::loadTextures()
@@ -185,7 +193,7 @@ void Renderer::drawFrame(const GameWorld* w)
 
 	auto car = w->getCar();
 	auto carpos = car->getPosition();
-	glUniform1f(mZoomUniform, 0.018f);
+	glUniform1f(mZoomUniform, mZoom);
 	drawGrass();
 	drawTrack();
 	drawCar(car);
