@@ -12,9 +12,11 @@ class GameWorld {
 		void updatePhysics(float time);
 		const Car* getCar() const;
 		Car* getCar();
+		const Track* getTrack() const;
 
 	private:
 		Abyss::World mPhysicsWorld;
+		Track mTrack;
 		Car mCar;
 };
 

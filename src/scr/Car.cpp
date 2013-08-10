@@ -11,9 +11,10 @@
 using Common::Vector2;
 
 
-static TyreConfig tyreconfig;
+TyreConfig Car::NormalTyreConfig;
+TyreConfig Car::OffroadTyreConfig;
 
-static void init_TyreConfig()
+void Car::initTyreConfigs()
 {
 	using namespace std;
 	static bool init = false;
@@ -25,17 +26,20 @@ static void init_TyreConfig()
 		string line;
 		while(getline(source, line)) {
 			istringstream in(line);
-			in >> tyreconfig.mCorneringForceCoefficient >>
-				tyreconfig.mSelfAligningTorqueCoefficient >>
-				tyreconfig.mRollingFrictionCoefficient;
+			in >> NormalTyreConfig.mCorneringForceCoefficient >>
+				NormalTyreConfig.mSelfAligningTorqueCoefficient >>
+				NormalTyreConfig.mRollingFrictionCoefficient;
 		}
 	}
+
+	OffroadTyreConfig.mCorneringForceCoefficient = NormalTyreConfig.mCorneringForceCoefficient * 0.5f;
+	OffroadTyreConfig.mSelfAligningTorqueCoefficient = NormalTyreConfig.mSelfAligningTorqueCoefficient * 0.5f;
+	OffroadTyreConfig.mRollingFrictionCoefficient = NormalTyreConfig.mRollingFrictionCoefficient  * 0.5f;
 }
 
 TyreForce::TyreForce(const Vector2& attachpos)
 	: mAttachPos(attachpos)
 {
-	init_TyreConfig();
 }
 
 void TyreForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
@@ -47,7 +51,7 @@ void TyreForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
 	float speed = body->velocity.length();
 	if(speed) {
 		// cornering force - lateral
-		static const float coefficient = tyreconfig.mCorneringForceCoefficient;
+		static const float coefficient = mTyreConfig.mCorneringForceCoefficient;
 		auto slipAngle = velDir.cross2d(tyreDir);
 		Vector2 latForce, rollingFriction;
 		// slipAngle may be nan when the magnitude of velDir and/or tyreDir
@@ -57,13 +61,15 @@ void TyreForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
 			latForce = latForce * slipAngle * coefficient;
 
 			// rolling friction - force opposite to velocity
-			rollingFriction = velDir * -speed * tyreconfig.mRollingFrictionCoefficient;
-			auto ang = std::max<float>(mBrake, slipAngle);
+			rollingFriction = velDir * -speed * mTyreConfig.mRollingFrictionCoefficient;
+			auto ang = 0.0f;
+			if(speed > 0.5)
+				ang = std::max<float>(mBrake, slipAngle);
 			rollingFriction = rollingFriction * (1.0f + ang * 100.0f);
 		}
 
 		// self aligning torque - force in the direction of the tyre
-		Vector2 selfAlign = tyreDir * speed * tyreconfig.mSelfAligningTorqueCoefficient;
+		Vector2 selfAlign = tyreDir * speed * mTyreConfig.mSelfAligningTorqueCoefficient;
 
 		assert(!isnan(latForce.x));
 		assert(!isnan(selfAlign.x));
@@ -101,14 +107,25 @@ void TyreForce::setBrake(float f)
 	mBrake = f;
 }
 
-Car::Car(float w, float l, Abyss::World* world)
+void TyreForce::setTyreConfig(const TyreConfig& tc)
+{
+	mTyreConfig = tc;
+}
+
+const Common::Vector2& TyreForce::getAttachPosition() const
+{
+	return mAttachPos;
+}
+
+Car::Car(float w, float l, Abyss::World* world, const Track* track)
 	: mWidth(w),
 	mLength(l),
 	mPhysicsWorld(world),
 	mLBTyreForce(TyreForce(Vector2(-mLength * 0.5f, -mWidth * 0.45f))),
 	mRBTyreForce(TyreForce(Vector2(mLength * 0.5f, -mWidth * 0.45f))),
 	mLFTyreForce(TyreForce(Vector2(-mLength * 0.5f, mWidth * 0.45f))),
-	mRFTyreForce(TyreForce(Vector2(mLength * 0.5f, mWidth * 0.45f)))
+	mRFTyreForce(TyreForce(Vector2(mLength * 0.5f, mWidth * 0.45f))),
+	mTrack(track)
 {
 	static const float mass = 1000.0f;
 	mRigidBody.setMass(mass);
@@ -120,6 +137,12 @@ Car::Car(float w, float l, Abyss::World* world)
 	mPhysicsWorld->getForceRegistry()->add(&mRigidBody, &mRBTyreForce);
 	mPhysicsWorld->getForceRegistry()->add(&mRigidBody, &mLFTyreForce);
 	mPhysicsWorld->getForceRegistry()->add(&mRigidBody, &mRFTyreForce);
+
+	initTyreConfigs();
+	mLBTyreForce.setTyreConfig(NormalTyreConfig);
+	mRBTyreForce.setTyreConfig(NormalTyreConfig);
+	mLFTyreForce.setTyreConfig(NormalTyreConfig);
+	mRFTyreForce.setTyreConfig(NormalTyreConfig);
 }
 
 Car::~Car()
@@ -134,6 +157,11 @@ Car::~Car()
 const Common::Vector2& Car::getPosition() const
 {
 	return mRigidBody.position;
+}
+
+void Car::setPosition(const Common::Vector2& pos)
+{
+	mRigidBody.position = pos;
 }
 
 float Car::getOrientation() const
@@ -171,6 +199,31 @@ void Car::setSteering(float value)
 	mSteering = -value;
 	mLFTyreForce.setAngle(mSteering * 0.2f);
 	mRFTyreForce.setAngle(mSteering * 0.2f);
+}
+
+void Car::moved()
+{
+	const auto& pos = mRigidBody.position;
+	if(mTrack->onTrack(pos + mLBTyreForce.getAttachPosition())) {
+		mLBTyreForce.setTyreConfig(NormalTyreConfig);
+	} else {
+		mLBTyreForce.setTyreConfig(OffroadTyreConfig);
+	}
+	if(mTrack->onTrack(pos + mRBTyreForce.getAttachPosition())) {
+		mRBTyreForce.setTyreConfig(NormalTyreConfig);
+	} else {
+		mRBTyreForce.setTyreConfig(OffroadTyreConfig);
+	}
+	if(mTrack->onTrack(pos + mLFTyreForce.getAttachPosition())) {
+		mLFTyreForce.setTyreConfig(NormalTyreConfig);
+	} else {
+		mLFTyreForce.setTyreConfig(OffroadTyreConfig);
+	}
+	if(mTrack->onTrack(pos + mRFTyreForce.getAttachPosition())) {
+		mRFTyreForce.setTyreConfig(NormalTyreConfig);
+	} else {
+		mRFTyreForce.setTyreConfig(OffroadTyreConfig);
+	}
 }
 
 

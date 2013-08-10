@@ -47,7 +47,7 @@ bool Renderer::init()
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
 
 	loadTextures();
 	loadCarVBO();
@@ -67,6 +67,8 @@ bool Renderer::init()
 void Renderer::loadTextures()
 {
 	mCarTexture = new Common::Texture("share/car.png");
+	mAsphaltTexture = new Common::Texture("share/asphalt.png");
+	mGrassTexture = new Common::Texture("share/grass.png");
 }
 
 void Renderer::loadCarVBO()
@@ -97,10 +99,75 @@ void Renderer::loadCarVBO()
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 }
 
+void Renderer::loadGrassVBO(const Track* t)
+{
+	Common::Vector2 bl, tr;
+	t->getLimits(bl, tr);
+	GLfloat vertices[] = {tr.x, tr.y,
+		tr.x, bl.y,
+		bl.x, tr.y,
+		bl.x, bl.y};
+	const float texScale = 0.1f;
+	GLfloat texcoord[] = {tr.x * texScale, bl.y * texScale,
+		tr.x * texScale, tr.y * texScale,
+		bl.x * texScale, bl.y * texScale,
+		bl.x * texScale, tr.y * texScale};
+	GLushort indices[] = {0, 2, 1,
+		1, 2, 3};
+
+	glGenBuffers(3, mGrassVBO);
+
+	// vertices
+	glBindBuffer(GL_ARRAY_BUFFER, mGrassVBO[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+	// texcoord
+	glBindBuffer(GL_ARRAY_BUFFER, mGrassVBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(texcoord), texcoord, GL_STATIC_DRAW);
+
+	// indices
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mGrassVBO[2]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+}
+
+void Renderer::loadTrackVBO(const Track* t)
+{
+	glGenBuffers(2, mTrackVBO);
+
+	auto segments = t->getTrackSegments();
+
+	assert(segments.size() == 1);
+
+	auto seg = segments[0];
+	auto triStrip = seg->getTriangleStrip();
+
+	std::vector<GLfloat> vertexdata;
+	std::vector<GLfloat> texcoorddata;
+	for(const auto& t : triStrip) {
+		vertexdata.push_back(t.x);
+		vertexdata.push_back(t.y);
+		texcoorddata.push_back(t.x * 0.1f);
+		texcoorddata.push_back(t.y * 0.1f);
+	}
+
+	glBindBuffer(GL_ARRAY_BUFFER, mTrackVBO[0]);
+	glBufferData(GL_ARRAY_BUFFER, vertexdata.size() * sizeof(GLfloat), &vertexdata[0], GL_STATIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, mTrackVBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, texcoorddata.size() * sizeof(GLfloat), &texcoorddata[0], GL_STATIC_DRAW);
+
+	mTrackElemCount = triStrip.size();
+}
+
 void Renderer::cleanup()
 {
+	delete mAsphaltTexture;
 	delete mCarTexture;
+	delete mGrassTexture;
+	glDeleteBuffers(2, mTrackVBO);
 	glDeleteBuffers(3, mCarVBO);
+	glDeleteBuffers(3, mGrassVBO);
+	mTrackElemCount = 0;
 }
 
 void Renderer::drawFrame(const GameWorld* w)
@@ -110,9 +177,21 @@ void Renderer::drawFrame(const GameWorld* w)
 	glUniform1f(mTopUniform, mHeight);
 	glUniform1i(mTextureUniform, 0);
 
+	auto track = w->getTrack();
+	if(!mTrackElemCount) {
+		loadTrackVBO(track);
+		loadGrassVBO(track);
+	}
+
 	auto car = w->getCar();
-	glUniform1f(mZoomUniform, 0.01f);
+	auto carpos = car->getPosition();
+	glUniform1f(mZoomUniform, 0.018f);
+	drawGrass();
+	drawTrack();
 	drawCar(car);
+
+	mCamPos.x = carpos.x;
+	mCamPos.y = carpos.y;
 
 	{
 		GLenum err;
@@ -125,21 +204,43 @@ void Renderer::drawFrame(const GameWorld* w)
 
 void Renderer::drawCar(const Car* car)
 {
-	auto pos = car->getPosition();
-	auto orient = car->getOrientation();
-	float cpx = mCamPos.x + pos.x;
-	float cpy = mCamPos.y + pos.y;
+	drawQuad(mCarVBO, mCarTexture, car->getPosition(),
+			car->getOrientation());
+}
 
-	glBindTexture(GL_TEXTURE_2D, mCarTexture->getTexture());
-	glUniform2f(mCameraUniform, cpx, cpy);
-	glUniform1f(mOrientationUniform, orient);
+void Renderer::drawTrack()
+{
+	glBindTexture(GL_TEXTURE_2D, mAsphaltTexture->getTexture());
+	glUniform2f(mCameraUniform, -mCamPos.x, -mCamPos.y);
+	glUniform1f(mOrientationUniform, 0.0f);
 
-	glBindBuffer(GL_ARRAY_BUFFER, mCarVBO[0]);
+	glBindBuffer(GL_ARRAY_BUFFER, mTrackVBO[0]);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-	glBindBuffer(GL_ARRAY_BUFFER, mCarVBO[1]);
+	glBindBuffer(GL_ARRAY_BUFFER, mTrackVBO[1]);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mCarVBO[2]);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, mTrackElemCount);
+}
+
+void Renderer::drawGrass()
+{
+	drawQuad(mGrassVBO, mGrassTexture, Common::Vector2(), 0.0f);
+}
+
+void Renderer::drawQuad(const GLuint vbo[3],
+		const Common::Texture* texture, const Common::Vector2& pos,
+		float orient)
+{
+	glBindTexture(GL_TEXTURE_2D, texture->getTexture());
+	glUniform2f(mCameraUniform, -mCamPos.x + pos.x, -mCamPos.y + pos.y);
+	glUniform1f(mOrientationUniform, orient);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[2]);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
 }
 
