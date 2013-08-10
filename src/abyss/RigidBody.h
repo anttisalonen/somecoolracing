@@ -41,7 +41,7 @@ namespace Abyss {
 			Common::Vector2 orientation = Common::Vector2(1.0, 0.0);
 
 			Common::Vector2 velocity;
-			Real rotation;
+			Real rotation = 0.0;
 
 			Common::Vector2 forceAccum;
 			Real torqueAccum = 0.0;
