@@ -32,9 +32,9 @@ void Car::initTyreConfigs()
 		}
 	}
 
-	OffroadTyreConfig.mCorneringForceCoefficient = NormalTyreConfig.mCorneringForceCoefficient * 0.5f;
-	OffroadTyreConfig.mSelfAligningTorqueCoefficient = NormalTyreConfig.mSelfAligningTorqueCoefficient * 0.5f;
-	OffroadTyreConfig.mRollingFrictionCoefficient = NormalTyreConfig.mRollingFrictionCoefficient  * 0.5f;
+	OffroadTyreConfig.mCorneringForceCoefficient = NormalTyreConfig.mCorneringForceCoefficient * 1.0f;
+	OffroadTyreConfig.mSelfAligningTorqueCoefficient = NormalTyreConfig.mSelfAligningTorqueCoefficient * 0.1f;
+	OffroadTyreConfig.mRollingFrictionCoefficient = NormalTyreConfig.mRollingFrictionCoefficient * 1.2f;
 }
 
 TyreForce::TyreForce(const Vector2& attachpos)
@@ -51,25 +51,21 @@ void TyreForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
 	float speed = body->velocity.length();
 	if(speed) {
 		// cornering force - lateral
-		static const float coefficient = mTyreConfig.mCorneringForceCoefficient;
 		auto slipAngle = velDir.cross2d(tyreDir);
 		Vector2 latForce, rollingFriction;
-		// slipAngle may be nan when the magnitude of velDir and/or tyreDir
-		// is slightly above 1 (floating point)
-		if(!isnan(slipAngle)) {
-			latForce = Common::Math::rotate2D(tyreDir, HALF_PI);
-			latForce = latForce * slipAngle * coefficient;
 
-			// rolling friction - force opposite to velocity
-			rollingFriction = velDir * -speed * mTyreConfig.mRollingFrictionCoefficient;
-			auto ang = 0.0f;
-			if(speed > 0.5)
-				ang = std::max<float>(mBrake, slipAngle);
-			rollingFriction = rollingFriction * (1.0f + ang * 100.0f);
-		}
+		latForce = Common::Math::rotate2D(tyreDir, HALF_PI);
+		latForce = latForce * slipAngle * mTyreConfig.mCorneringForceCoefficient;
 
 		// self aligning torque - force in the direction of the tyre
 		Vector2 selfAlign = tyreDir * speed * mTyreConfig.mSelfAligningTorqueCoefficient;
+
+		// rolling friction - force opposite to velocity
+		rollingFriction = velDir * -speed * mTyreConfig.mRollingFrictionCoefficient;
+		auto ang = 0.0f;
+		if(speed > 0.5)
+			ang = std::max<float>(mBrake, slipAngle);
+		rollingFriction = rollingFriction * (1.0f + ang * 2.0f);
 
 		assert(!isnan(latForce.x));
 		assert(!isnan(selfAlign.x));
@@ -79,7 +75,7 @@ void TyreForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
 
 	// throttle
 	if(mThrottle)
-		force = force + tyreDir * mThrottle * 1000.0f;
+		force = force + tyreDir * mThrottle * 25000.0f;
 
 	if(!force.null()) {
 		Vector2 lws = body->getPointInWorldSpace(mAttachPos);
@@ -127,10 +123,10 @@ Car::Car(float w, float l, Abyss::World* world, const Track* track)
 	mRFTyreForce(TyreForce(Vector2(mLength * 0.5f, mWidth * 0.45f))),
 	mTrack(track)
 {
-	static const float mass = 1000.0f;
+	const float mass = 1000.0f;
 	mRigidBody.setMass(mass);
 	mRigidBody.setInertiaTensor(mass * (1.0 / 12.0) * ((mWidth * mWidth) + (mLength * mLength)));
-	mRigidBody.angularDamping = 0.2;
+	mRigidBody.angularDamping = 0.6;
 
 	mPhysicsWorld->addBody(&mRigidBody);
 	mPhysicsWorld->getForceRegistry()->add(&mRigidBody, &mLBTyreForce);
@@ -195,7 +191,7 @@ void Car::setBrake(float value)
 
 void Car::setSteering(float value)
 {
-	assert(value >= -1.0f && value <= 1.0f);
+	value = Common::clamp(-1.0f, value, 1.0f);
 	mSteering = -value;
 	mLFTyreForce.setAngle(mSteering * 0.2f);
 	mRFTyreForce.setAngle(mSteering * 0.2f);
