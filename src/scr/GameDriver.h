@@ -5,6 +5,7 @@
 
 #include "common/DriverFramework.h"
 #include "common/Clock.h"
+#include "common/Vector2.h"
 
 #include "GameWorld.h"
 
@@ -17,6 +18,8 @@ class GameDriver : public Common::Driver {
 
 		bool handleKeyDown(float frameTime, SDLKey key) override;
 		bool handleKeyUp(float frameTime, SDLKey key) override;
+		bool handleMouseMotion(float frameTime, const SDL_MouseMotionEvent& ev) override;
+		bool handleMousePress(float frameTime, Uint8 button) override;
 
 	private:
 		Renderer mRenderer;
@@ -29,6 +32,8 @@ class GameDriver : public Common::Driver {
 		float mZoom = 0.15f;
 
 		Common::SteadyTimer mDebugDisplay;
+
+		bool mSteeringWithMouse = false;
 };
 
 #endif

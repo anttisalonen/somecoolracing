@@ -157,6 +157,18 @@ float Renderer::setZoom(float z)
 	return mZoom;
 }
 
+void Renderer::setSteering(float throttle, float brake, float steering)
+{
+	mInfoTexts.clear();
+	char buf[128];
+	sprintf(buf, "Throttle: %d %%", (int)(throttle * 100));
+	mInfoTexts.push_back(std::string(buf));
+	sprintf(buf, "Brake: %d %%", (int)(brake * 100));
+	mInfoTexts.push_back(std::string(buf));
+	sprintf(buf, "Steering: %d %%", (int)(steering * 100));
+	mInfoTexts.push_back(std::string(buf));
+}
+
 void Renderer::loadTextures()
 {
 	mCarTexture = new Common::Texture("share/car.png");
@@ -289,6 +301,9 @@ void Renderer::drawFrame(const GameWorld* w)
 
 	auto track = w->getTrack();
 	auto car = w->getCar();
+
+	mScreenOrientation = car->getOrientation();
+
 	if(mTrackSegments.empty()) {
 		loadCarVBO(car);
 		loadTrackVBO(track);
@@ -339,8 +354,9 @@ void Renderer::drawCar(const Car* car)
 void Renderer::drawTrackSegment(const TSRender& ts)
 {
 	glBindTexture(GL_TEXTURE_2D, mAsphaltTexture->getTexture());
-	glUniform2f(mCameraUniform, -mCamPos.x, -mCamPos.y);
-	glUniform1f(mOrientationUniform, 0.0f);
+	auto cam = Math::rotate2D(mCamPos, mScreenOrientation);
+	glUniform2f(mCameraUniform, -cam.x, -cam.y);
+	glUniform1f(mOrientationUniform, -mScreenOrientation);
 	glUniform4f(mColorUniform, 1.0f, 1.0f, 1.0f, 1.0f);
 
 	glBindBuffer(GL_ARRAY_BUFFER, ts.VBO[0]);
@@ -373,11 +389,16 @@ void Renderer::drawDebugPoints()
 
 void Renderer::drawQuad(const GLuint vbo[3],
 		const Common::Texture* texture, const Common::Vector2& pos,
-		float orient, const Common::Color& col)
+		float orient, const Common::Color& col, bool isHud)
 {
 	glBindTexture(GL_TEXTURE_2D, texture->getTexture());
-	glUniform2f(mCameraUniform, -mCamPos.x + pos.x, -mCamPos.y + pos.y);
-	glUniform1f(mOrientationUniform, orient);
+	auto cam = isHud ? mCamPos : Math::rotate2D(mCamPos, mScreenOrientation);
+	auto rotpos = isHud ? pos : Math::rotate2D(pos, mScreenOrientation);
+	glUniform2f(mCameraUniform, -cam.x + rotpos.x, -cam.y + rotpos.y);
+	if(isHud)
+		glUniform1f(mOrientationUniform, 0.0f);
+	else
+		glUniform1f(mOrientationUniform, orient - mScreenOrientation);
 	glUniform4f(mColorUniform, col.r / 255.0f, col.g / 255.0f, col.b / 255.0f, 1.0f);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
@@ -408,13 +429,21 @@ void Renderer::drawTexts(const GameWorld* w)
 	sprintf(buf, "Speed: %d Km/h", (int)w->getCar()->getSpeed());
 	auto text = getText(buf);
 	drawHUDQuad(text->vbo, text->texture.get(), Vector2(10, 10), 0.0f, Common::Color::White);
+
+	int i = 1;
+	for(const auto& p : mInfoTexts) {
+		auto t = getText(p.c_str());
+		drawHUDQuad(t->vbo, t->texture.get(), Vector2(10, 10 + 10 * i), 0.0f, Common::Color::White);
+		i++;
+	}
 }
 
 void Renderer::drawHUDQuad(const GLuint vbo[3],
 		const Common::Texture* texture, const Common::Vector2& pos,
 		float orient, const Common::Color& col)
 {
-	drawQuad(vbo, texture, mCamPos + Vector2(mWidth, mHeight) * -1.0f + pos * 2.0f, orient, col);
+	drawQuad(vbo, texture, mCamPos + Vector2(mWidth, mHeight) * -1.0f + pos * 2.0f,
+			-mScreenOrientation + orient, col, true);
 }
 
 GLuint Renderer::loadShader(const char* src, GLenum type)

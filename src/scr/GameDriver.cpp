@@ -1,5 +1,7 @@
 #include "GameDriver.h"
 
+#include "common/Math.h"
+
 GameDriver::GameDriver(unsigned int screenWidth, unsigned int screenHeight, const char* caption)
 	: Driver(screenWidth, screenHeight, caption),
 	mRenderer(screenWidth, screenHeight),
@@ -28,6 +30,7 @@ bool GameDriver::prerenderUpdate(float frameTime)
 	mWorld.updatePhysics(frameTime);
 	mZoom += mZoomSpeed * frameTime;
 	mZoom = mRenderer.setZoom(mZoom);
+	mRenderer.setSteering(mThrottle, mBrake, mSteering);
 
 	if(mDebugDisplay.check(frameTime)) {
 		mRenderer.updateDebug(&mWorld);
@@ -42,19 +45,23 @@ bool GameDriver::handleKeyDown(float frameTime, SDLKey key)
 			return true;
 
 		case SDLK_w:
-			mThrottle = 1.0f;
+			if(!mSteeringWithMouse)
+				mThrottle = 1.0f;
 			break;
 
 		case SDLK_s:
-			mBrake = 1.0f;
+			if(!mSteeringWithMouse)
+				mBrake = 1.0f;
 			break;
 
 		case SDLK_a:
-			mSteering = -1.0f;
+			if(!mSteeringWithMouse)
+				mSteering = -1.0f;
 			break;
 
 		case SDLK_d:
-			mSteering = 1.0f;
+			if(!mSteeringWithMouse)
+				mSteering = 1.0f;
 			break;
 
 		case SDLK_SPACE:
@@ -82,19 +89,23 @@ bool GameDriver::handleKeyUp(float frameTime, SDLKey key)
 {
 	switch(key) {
 		case SDLK_w:
-			mThrottle = 0.0f;
+			if(!mSteeringWithMouse)
+				mThrottle = 0.0f;
 			break;
 
 		case SDLK_s:
-			mBrake = 0.0f;
+			if(!mSteeringWithMouse)
+				mBrake = 0.0f;
 			break;
 
 		case SDLK_a:
-			mSteering = 0.0f;
+			if(!mSteeringWithMouse)
+				mSteering = 0.0f;
 			break;
 
 		case SDLK_d:
-			mSteering = 0.0f;
+			if(!mSteeringWithMouse)
+				mSteering = 0.0f;
 			break;
 
 		case SDLK_PLUS:
@@ -106,6 +117,53 @@ bool GameDriver::handleKeyUp(float frameTime, SDLKey key)
 
 		default:
 			break;
+	}
+
+	return false;
+}
+
+bool GameDriver::handleMouseMotion(float frameTime, const SDL_MouseMotionEvent& ev)
+{
+	if(mSteeringWithMouse) {
+#if 0
+		mSteering += ev.xrel * 0.01f;
+		mThrottle -= mBrake;
+		mThrottle -= ev.yrel * 0.01f;
+		if(mThrottle < 0.0f) {
+			mBrake = -mThrottle;
+			mThrottle = 0.0f;
+		}
+#else
+		mSteering = (ev.x / (float)getScreenWidth() * 2.0f) - 1.0f;
+		float y = ((1.0f - ev.y / (float)getScreenHeight()) * 2.0f) - 1.0f;
+		mThrottle = std::max(0.0f, y);
+		mBrake = std::max(0.0f, -y);
+#endif
+
+		mSteering = Common::clamp(-1.0f, mSteering, 1.0f);
+		mThrottle = Common::clamp(0.0f, mThrottle, 1.0f);
+		mBrake = Common::clamp(0.0f, mBrake, 1.0f);
+	}
+
+	return false;
+}
+
+bool GameDriver::handleMousePress(float frameTime, Uint8 button)
+{
+	if(button == SDL_BUTTON_LEFT) {
+		mSteeringWithMouse = !mSteeringWithMouse;
+		if(mSteeringWithMouse) {
+			mSteering = 0.0f;
+			mThrottle = 0.0f;
+			mBrake = 0.0f;
+			SDL_WarpMouse(getScreenWidth() / 2, getScreenHeight() / 2);
+		}
+	}
+
+	if(button == SDL_BUTTON_WHEELUP) {
+		mZoom -= 0.02f;
+	} else if(button == SDL_BUTTON_WHEELDOWN) {
+		mZoom += 0.02f;
 	}
 
 	return false;

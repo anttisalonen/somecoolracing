@@ -51,6 +51,7 @@ class Renderer {
 		void cleanup();
 
 		float setZoom(float z);
+		void setSteering(float throttle, float brake, float steering);
 		void updateDebug(const GameWorld* w);
 
 	private:
@@ -66,7 +67,7 @@ class Renderer {
 		void drawGrass();
 		void drawQuad(const GLuint vbo[3],
 				const Common::Texture* texture, const Common::Vector2& pos,
-				float orient, const Common::Color& col);
+				float orient, const Common::Color& col, bool isHud = false);
 		void drawHUDQuad(const GLuint vbo[3],
 				const Common::Texture* texture, const Common::Vector2& pos,
 				float orient, const Common::Color& col);
@@ -103,6 +104,9 @@ class Renderer {
 
 		float mZoom = 0.01f;
 		std::map<boost::shared_ptr<Common::Texture>, Text*> mTextCache;
+
+		std::vector<std::string> mInfoTexts;
+		float mScreenOrientation = 0.0f;
 };
 
 #endif
