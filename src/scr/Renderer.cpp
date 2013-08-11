@@ -57,10 +57,45 @@ void DebugPointer::add(const Common::Vector2& pos, const Common::Color& col)
 	}
 }
 
+
+Text::Text(boost::shared_ptr<Common::Texture> t)
+	: texture(t)
+{
+	glGenBuffers(3, vbo);
+
+	float w = texture->getWidth();
+	float h = texture->getHeight();
+
+	GLfloat vertices[] = {w, h,
+		w, 0.0f,
+		0.0f, h,
+		0.0f, 0.0f};
+	GLfloat texcoord[] = {1.0f, 0.0f,
+		1.0f, 1.0f,
+		0.0f, 0.0f,
+		0.0f, 1.0f};
+	GLushort indices[] = {0, 2, 1,
+		1, 2, 3};
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(texcoord), texcoord, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[2]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+}
+
+Text::~Text()
+{
+	glDeleteBuffers(3, vbo);
+}
+
+
 Renderer::Renderer(int w, int h)
 	: mWidth(w),
 	mHeight(h),
-	mCamPos(-1, -1)
+	mCamPos(-1, -1),
+	mTextRenderer("share/DejaVuSans.ttf", 24)
 {
 }
 
@@ -239,6 +274,10 @@ void Renderer::cleanup()
 	}
 	glDeleteBuffers(3, mCarVBO);
 	glDeleteBuffers(3, mGrassVBO);
+
+	for(auto p : mTextCache) {
+		delete p.second;
+	}
 }
 
 void Renderer::drawFrame(const GameWorld* w)
@@ -257,13 +296,17 @@ void Renderer::drawFrame(const GameWorld* w)
 	auto car = w->getCar();
 	auto carpos = car->getPosition();
 	glUniform1f(mZoomUniform, mZoom);
+
+	mCamPos.x = carpos.x;
+	mCamPos.y = carpos.y;
+
 	drawGrass();
 	drawTrack();
 	drawCar(car);
 	drawDebugPoints();
-
-	mCamPos.x = carpos.x;
-	mCamPos.y = carpos.y;
+	
+	glUniform1f(mZoomUniform, 1.0f);
+	drawTexts(w);
 
 	{
 		GLenum err;
@@ -343,6 +386,34 @@ void Renderer::drawQuad(const GLuint vbo[3],
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[2]);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
+}
+
+Text* Renderer::getText(const char* s)
+{
+	auto texture = mTextRenderer.renderText(s, Common::Color::White);
+	auto it = mTextCache.find(texture);
+	if(it == mTextCache.end()) {
+		auto text = new Text(texture);
+		mTextCache.insert({texture, text});
+		return text;
+	} else {
+		return it->second;
+	}
+}
+
+void Renderer::drawTexts(const GameWorld* w)
+{
+	char buf[128];
+	sprintf(buf, "Speed: %d Km/h", (int)w->getCar()->getSpeed());
+	auto text = getText(buf);
+	drawHUDQuad(text->vbo, text->texture.get(), Vector2(10, 10), 0.0f, Common::Color::White);
+}
+
+void Renderer::drawHUDQuad(const GLuint vbo[3],
+		const Common::Texture* texture, const Common::Vector2& pos,
+		float orient, const Common::Color& col)
+{
+	drawQuad(vbo, texture, mCamPos + Vector2(mWidth, mHeight) * -1.0f + pos * 2.0f, orient, col);
 }
 
 GLuint Renderer::loadShader(const char* src, GLenum type)

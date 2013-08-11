@@ -10,6 +10,7 @@
 
 #include "common/Texture.h"
 #include "common/Vector2.h"
+#include "common/TextRenderer.h"
 
 #include "GameWorld.h"
 #include "Car.h"
@@ -32,6 +33,14 @@ struct DebugPointer {
 
 	void init();
 	void add(const Common::Vector2& pos, const Common::Color& col);
+};
+
+class Text {
+	public:
+		Text(boost::shared_ptr<Common::Texture> t);
+		~Text();
+		boost::shared_ptr<Common::Texture> texture;
+		GLuint vbo[3];
 };
 
 class Renderer {
@@ -58,8 +67,13 @@ class Renderer {
 		void drawQuad(const GLuint vbo[3],
 				const Common::Texture* texture, const Common::Vector2& pos,
 				float orient, const Common::Color& col);
+		void drawHUDQuad(const GLuint vbo[3],
+				const Common::Texture* texture, const Common::Vector2& pos,
+				float orient, const Common::Color& col);
 		void drawTrackSegment(const TSRender& ts);
 		void drawDebugPoints();
+		void drawTexts(const GameWorld* w);
+		Text* getText(const char* s);
 
 		GLuint loadProgram(const char* vertfilename, const char* fragfilename,
 				const std::vector<std::pair<int, std::string>>& attribbindings);
@@ -85,8 +99,10 @@ class Renderer {
 
 		std::vector<TSRender> mTrackSegments;
 		DebugPointer mDebugPoints;
+		Common::TextRenderer mTextRenderer;
 
 		float mZoom = 0.01f;
+		std::map<boost::shared_ptr<Common::Texture>, Text*> mTextCache;
 };
 
 #endif
