@@ -64,6 +64,11 @@ bool GameDriver::handleKeyDown(float frameTime, SDLKey key)
 				mSteering = 1.0f;
 			break;
 
+		case SDLK_c:
+			mCamOrientation = !mCamOrientation;
+			mRenderer.setCamOrientation(mCamOrientation);
+			break;
+
 		case SDLK_SPACE:
 			std::cout << mWorld.getCar()->getSpeed() << "\n";
 			break;

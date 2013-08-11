@@ -302,7 +302,7 @@ void Renderer::drawFrame(const GameWorld* w)
 	auto track = w->getTrack();
 	auto car = w->getCar();
 
-	mScreenOrientation = car->getOrientation();
+	mScreenOrientation = mCamOrientation ? car->getOrientation() : 0.0f;
 
 	if(mTrackSegments.empty()) {
 		loadCarVBO(car);
@@ -538,4 +538,8 @@ GLuint Renderer::loadProgram(const char* vertfilename, const char* fragfilename,
 	return programobj;
 }
 
+void Renderer::setCamOrientation(bool o)
+{
+	mCamOrientation = o;
+}
 

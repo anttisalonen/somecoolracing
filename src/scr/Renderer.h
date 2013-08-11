@@ -53,6 +53,7 @@ class Renderer {
 		float setZoom(float z);
 		void setSteering(float throttle, float brake, float steering);
 		void updateDebug(const GameWorld* w);
+		void setCamOrientation(bool o);
 
 	private:
 		bool initGL();
@@ -107,6 +108,7 @@ class Renderer {
 
 		std::vector<std::string> mInfoTexts;
 		float mScreenOrientation = 0.0f;
+		bool mCamOrientation = false;
 };
 
 #endif

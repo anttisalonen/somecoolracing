@@ -34,6 +34,7 @@ class GameDriver : public Common::Driver {
 		Common::SteadyTimer mDebugDisplay;
 
 		bool mSteeringWithMouse = false;
+		bool mCamOrientation = false;
 };
 
 #endif
