@@ -26,7 +26,7 @@ bool GameDriver::prerenderUpdate(float frameTime)
 		car->setBrake(mBrake);
 	car->setSteering(mSteering);
 	mWorld.updatePhysics(frameTime);
-	mZoom += mZoomSpeed * frameTime * 0.1f;
+	mZoom += mZoomSpeed * frameTime;
 	mZoom = mRenderer.setZoom(mZoom);
 
 	if(mDebugDisplay.check(frameTime)) {

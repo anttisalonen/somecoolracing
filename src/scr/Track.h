@@ -60,9 +60,8 @@ class CurveSegment : public TrackSegment {
 		Common::Vector2 mP1;
 		float mWidth;
 
-		// The size depends on the samples used in
-		// getTriangleStrip
-		std::array<Common::Vector2, 11> mApproximations;
+		std::vector<Common::Vector2> mApproximations;
+		int mNumApproxSegments;
 };
 
 class Track {

@@ -75,10 +75,20 @@ CurveSegment::CurveSegment(const Common::Vector2& startpos,
 		throw std::runtime_error("Cannot construct a curve!");
 	}
 
+	// Calculate an estimation of the curve length
+	float len = 0.0f;
+	for(int i = 0; i < 10; i++) {
+		auto p1 = pointOnCurve(i / 10.0);
+		auto p2 = pointOnCurve((i + 1) / 10.0);
+		len += p1.distance(p2);
+	}
+	mNumApproxSegments = 5 + pow(len, 0.5f);
+	std::cout << len << "\t" << mNumApproxSegments << "\n";
+
 	// Create lines that estimate the curve for onTrack() query.
-	for(size_t i = 0; i < mApproximations.size(); i++) {
-		auto pt = pointOnCurve(i / (float)(mApproximations.size() - 1));
-		mApproximations[i] = pt;
+	for(size_t i = 0; i < mNumApproxSegments; i++) {
+		auto pt = pointOnCurve(i / (float)(mNumApproxSegments - 1));
+		mApproximations.push_back(pt);
 	}
 }
 
@@ -99,15 +109,13 @@ bool CurveSegment::onTrack(const Common::Vector2& pos) const
 std::vector<Common::Vector2> CurveSegment::getTriangleStrip() const
 {
 	std::vector<Common::Vector2> ret;
-	// TODO: make increment dependent on curve length
-	// Note that the size of mApproximations should
-	// depend on the number of samples.
-	for(float f = 0.0f; f <= 1.01f; f += 0.1f) {
-		auto pc = pointOnCurve(f);
+	for(size_t i = 0; i < mApproximations.size(); i++) {
+		float t = i / (float)(mNumApproxSegments - 1);
+		auto pc = pointOnCurve(t);
 
 		// Calculate normal of the curve from the
 		// direction (tangent, derivative) of the curve.
-		auto dir = directionOnCurve(f);
+		auto dir = directionOnCurve(t);
 		Vector2 v1 = pc + Math::rotate2D(dir, HALF_PI) * mWidth * 0.5f;
 		Vector2 v2 = pc - Math::rotate2D(dir, HALF_PI) * mWidth * 0.5f;
 		ret.push_back(v1);
@@ -138,13 +146,13 @@ Common::Vector2 CurveSegment::directionOnCurve(float t) const
 
 Track::Track()
 {
-	const float width = 5.0f;
+	const float width = 15.0f;
 	auto s1 = new StraightTrackSegment(Vector2(0.0f, 0.0f),
 				Vector2(1.0f, 0.0f),
-				10.0f, width);
+				200.0f, width);
 	auto s1end = s1->getEndPosition();
 
-	auto s2end = s1end + Vector2(10.0f, 30.0f);
+	auto s2end = s1end + Vector2(200.0f, 600.0f);
 	auto s2enddir = Vector2(-1.0f, 2.0f).normalized();
 	auto s2 = new CurveSegment(s1end,
 				Vector2(1.0f, 0.0f),
@@ -152,14 +160,14 @@ Track::Track()
 				s2enddir,
 				width);
 
-	auto s3end = s2end + Vector2(-30.0f, 0.0f);
+	auto s3end = s2end + Vector2(-600.0f, 0.0f);
 	auto s3enddir = Vector2(-3.0f, -1.0f).normalized();
 	auto s3 = new CurveSegment(s2end, s2enddir, s3end, s3enddir, width);
 
-	auto s4 = new StraightTrackSegment(s3end, s3enddir, 15.0f, width);
+	auto s4 = new StraightTrackSegment(s3end, s3enddir, 300.0f, width);
 	auto s4end = s4->getEndPosition();
 
-	auto s5end = Vector2(-30.0f, 0.0f);
+	auto s5end = Vector2(-600.0f, 0.0f);
 	auto s5enddir = Vector2(1.0f, 0.0f);
 	auto s5 = new CurveSegment(s4end, s3enddir, s5end, s5enddir, width);
 
@@ -196,9 +204,9 @@ bool Track::onTrack(const Common::Vector2& pos) const
 
 void Track::getLimits(Common::Vector2& bl, Common::Vector2& tr) const
 {
-	bl.x = -100.0;
-	bl.y = -100.0;
-	tr.x = 100.0;
-	tr.y = 100.0;
+	bl.x = -2000.0;
+	bl.y = -2000.0;
+	tr.x = 2000.0;
+	tr.y = 2000.0;
 }
 
