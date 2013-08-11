@@ -58,12 +58,12 @@ bool GameDriver::handleKeyDown(float frameTime, SDLKey key)
 
 		case SDLK_PLUS:
 		case SDLK_KP_PLUS:
-			mZoomSpeed = 1.0f;
+			mZoomSpeed = -1.0f;
 			break;
 
 		case SDLK_MINUS:
 		case SDLK_KP_MINUS:
-			mZoomSpeed = -1.0f;
+			mZoomSpeed = 1.0f;
 			break;
 
 		default:
