@@ -2,7 +2,8 @@
 
 GameDriver::GameDriver(unsigned int screenWidth, unsigned int screenHeight, const char* caption)
 	: Driver(screenWidth, screenHeight, caption),
-	mRenderer(screenWidth, screenHeight)
+	mRenderer(screenWidth, screenHeight),
+	mDebugDisplay(0.2f)
 {
 }
 
@@ -27,6 +28,10 @@ bool GameDriver::prerenderUpdate(float frameTime)
 	mWorld.updatePhysics(frameTime);
 	mZoom += mZoomSpeed * frameTime * 0.1f;
 	mZoom = mRenderer.setZoom(mZoom);
+
+	if(mDebugDisplay.check(frameTime)) {
+		mRenderer.updateDebug(&mWorld);
+	}
 	return false;
 }
 

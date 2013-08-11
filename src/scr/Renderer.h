@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <string>
+#include <array>
 
 #include "common/Texture.h"
 #include "common/Vector2.h"
@@ -13,6 +14,25 @@
 #include "GameWorld.h"
 #include "Car.h"
 #include "Track.h"
+
+struct TSRender {
+	GLuint VBO[2];
+	unsigned int ElemCount = 0;
+};
+
+struct DebugPointer {
+	struct DebugPoint {
+		GLuint VBO[3];
+		Common::Vector2 Pos;
+		Common::Color Color;
+	};
+
+	std::array<DebugPoint, 100> Points;
+	unsigned int DebugPointIndex = 0;
+
+	void init();
+	void add(const Common::Vector2& pos, const Common::Color& col);
+};
 
 class Renderer {
 	public:
@@ -22,6 +42,7 @@ class Renderer {
 		void cleanup();
 
 		float setZoom(float z);
+		void updateDebug(const GameWorld* w);
 
 	private:
 		bool initGL();
@@ -29,13 +50,16 @@ class Renderer {
 		void loadCarVBO();
 		void loadGrassVBO(const Track* t);
 		void loadTrackVBO(const Track* t);
+		void loadDebugVBO();
 
 		void drawCar(const Car* car);
 		void drawTrack();
 		void drawGrass();
 		void drawQuad(const GLuint vbo[3],
 				const Common::Texture* texture, const Common::Vector2& pos,
-				float orient);
+				float orient, const Common::Color& col);
+		void drawTrackSegment(const TSRender& ts);
+		void drawDebugPoints();
 
 		GLuint loadProgram(const char* vertfilename, const char* fragfilename,
 				const std::vector<std::pair<int, std::string>>& attribbindings);
@@ -54,11 +78,13 @@ class Renderer {
 		GLuint mRightUniform;
 		GLuint mTopUniform;
 		GLuint mTextureUniform;
+		GLuint mColorUniform;
 		GLuint mCarProgram;
 		GLuint mCarVBO[3];
-		GLuint mTrackVBO[2];
-		unsigned int mTrackElemCount = 0;
 		GLuint mGrassVBO[3];
+
+		std::vector<TSRender> mTrackSegments;
+		DebugPointer mDebugPoints;
 
 		float mZoom = 0.01f;
 };

@@ -4,6 +4,7 @@
 #include "Renderer.h"
 
 #include "common/DriverFramework.h"
+#include "common/Clock.h"
 
 #include "GameWorld.h"
 
@@ -26,6 +27,8 @@ class GameDriver : public Common::Driver {
 		float mSteering = 0.0f;
 		float mZoomSpeed = 0.0f;
 		float mZoom = 0.015f;
+
+		Common::SteadyTimer mDebugDisplay;
 };
 
 #endif

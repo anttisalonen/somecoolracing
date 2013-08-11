@@ -46,6 +46,7 @@ class Car {
 		void setSteering(float value);
 		Abyss::RigidBody* getBody();
 		void moved();
+		bool isOffroad() const;
 
 	private:
 		float mWidth;
@@ -58,6 +59,7 @@ class Car {
 		TyreForce mLFTyreForce;
 		TyreForce mRFTyreForce;
 		const Track* mTrack;
+		bool mOffroad = false;
 
 		static void initTyreConfigs();
 		static TyreConfig NormalTyreConfig;

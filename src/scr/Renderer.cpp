@@ -8,6 +8,55 @@
 #include <fstream>
 #include <sstream>
 
+
+using namespace Common;
+
+void DebugPointer::init()
+{
+	for(auto& p : Points) {
+		p.VBO[0] = 0;
+		p.VBO[1] = 0;
+		p.VBO[2] = 0;
+	}
+}
+
+void DebugPointer::add(const Common::Vector2& pos, const Common::Color& col)
+{
+	unsigned int i = DebugPointIndex++;
+	DebugPointIndex = DebugPointIndex % Points.size();
+
+	DebugPoint& p = Points[i];
+	p.Pos = pos;
+	p.Color = col;
+
+	if(p.VBO[0] == 0) {
+		glGenBuffers(3, p.VBO);
+
+		GLfloat vertices[] = {0.1f, 0.1f,
+			0.1f, -0.1f,
+			-0.1f, 0.1f,
+			-0.1f, -0.1f};
+		GLfloat texcoord[] = {1.0f, 0.0f,
+			1.0f, 1.0f,
+			0.0f, 0.0f,
+			0.0f, 1.0f};
+		GLushort indices[] = {0, 2, 1,
+			1, 2, 3};
+
+		// vertices
+		glBindBuffer(GL_ARRAY_BUFFER, p.VBO[0]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+		// texcoord
+		glBindBuffer(GL_ARRAY_BUFFER, p.VBO[1]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(texcoord), texcoord, GL_STATIC_DRAW);
+
+		// indices
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, p.VBO[2]);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+	}
+}
+
 Renderer::Renderer(int w, int h)
 	: mWidth(w),
 	mHeight(h),
@@ -44,6 +93,7 @@ bool Renderer::init()
 	mRightUniform   = glGetUniformLocation(mCarProgram, "uRight");
 	mTopUniform     = glGetUniformLocation(mCarProgram, "uTop");
 	mTextureUniform = glGetUniformLocation(mCarProgram, "sTexture");
+	mColorUniform   = glGetUniformLocation(mCarProgram, "uColor");
 	glUseProgram(mCarProgram);
 
 	glEnableVertexAttribArray(0);
@@ -53,6 +103,7 @@ bool Renderer::init()
 
 	loadTextures();
 	loadCarVBO();
+	loadDebugVBO();
 
 	bool error = false;
 	{
@@ -140,31 +191,39 @@ void Renderer::loadGrassVBO(const Track* t)
 
 void Renderer::loadTrackVBO(const Track* t)
 {
-	glGenBuffers(2, mTrackVBO);
-
 	auto segments = t->getTrackSegments();
 
-	assert(segments.size() == 1);
+	for(const auto& seg : segments) {
+		TSRender r;
 
-	auto seg = segments[0];
-	auto triStrip = seg->getTriangleStrip();
+		glGenBuffers(2, r.VBO);
 
-	std::vector<GLfloat> vertexdata;
-	std::vector<GLfloat> texcoorddata;
-	for(const auto& t : triStrip) {
-		vertexdata.push_back(t.x);
-		vertexdata.push_back(t.y);
-		texcoorddata.push_back(t.x * 0.1f);
-		texcoorddata.push_back(t.y * 0.1f);
+		auto triStrip = seg->getTriangleStrip();
+
+		std::vector<GLfloat> vertexdata;
+		std::vector<GLfloat> texcoorddata;
+		for(const auto& t : triStrip) {
+			vertexdata.push_back(t.x);
+			vertexdata.push_back(t.y);
+			texcoorddata.push_back(t.x * 0.1f);
+			texcoorddata.push_back(t.y * 0.1f);
+		}
+
+		glBindBuffer(GL_ARRAY_BUFFER, r.VBO[0]);
+		glBufferData(GL_ARRAY_BUFFER, vertexdata.size() * sizeof(GLfloat), &vertexdata[0], GL_STATIC_DRAW);
+
+		glBindBuffer(GL_ARRAY_BUFFER, r.VBO[1]);
+		glBufferData(GL_ARRAY_BUFFER, texcoorddata.size() * sizeof(GLfloat), &texcoorddata[0], GL_STATIC_DRAW);
+
+		r.ElemCount = triStrip.size();
+
+		mTrackSegments.push_back(r);
 	}
+}
 
-	glBindBuffer(GL_ARRAY_BUFFER, mTrackVBO[0]);
-	glBufferData(GL_ARRAY_BUFFER, vertexdata.size() * sizeof(GLfloat), &vertexdata[0], GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, mTrackVBO[1]);
-	glBufferData(GL_ARRAY_BUFFER, texcoorddata.size() * sizeof(GLfloat), &texcoorddata[0], GL_STATIC_DRAW);
-
-	mTrackElemCount = triStrip.size();
+void Renderer::loadDebugVBO()
+{
+	mDebugPoints.init();
 }
 
 void Renderer::cleanup()
@@ -172,10 +231,14 @@ void Renderer::cleanup()
 	delete mAsphaltTexture;
 	delete mCarTexture;
 	delete mGrassTexture;
-	glDeleteBuffers(2, mTrackVBO);
+	for(const auto& p : mDebugPoints.Points) {
+		glDeleteBuffers(3, p.VBO);
+	}
+	for(const auto& t : mTrackSegments) {
+		glDeleteBuffers(2, t.VBO);
+	}
 	glDeleteBuffers(3, mCarVBO);
 	glDeleteBuffers(3, mGrassVBO);
-	mTrackElemCount = 0;
 }
 
 void Renderer::drawFrame(const GameWorld* w)
@@ -186,7 +249,7 @@ void Renderer::drawFrame(const GameWorld* w)
 	glUniform1i(mTextureUniform, 0);
 
 	auto track = w->getTrack();
-	if(!mTrackElemCount) {
+	if(mTrackSegments.empty()) {
 		loadTrackVBO(track);
 		loadGrassVBO(track);
 	}
@@ -197,6 +260,7 @@ void Renderer::drawFrame(const GameWorld* w)
 	drawGrass();
 	drawTrack();
 	drawCar(car);
+	drawDebugPoints();
 
 	mCamPos.x = carpos.x;
 	mCamPos.y = carpos.y;
@@ -210,38 +274,67 @@ void Renderer::drawFrame(const GameWorld* w)
 
 }
 
+void Renderer::updateDebug(const GameWorld* w)
+{
+	auto car = w->getCar();
+	auto pos = car->getPosition();
+
+	if(!w->getTrack()->onTrack(pos)) {
+		mDebugPoints.add(pos, Color::Red);
+	} else {
+		mDebugPoints.add(pos, Color::Blue);
+	}
+}
+
 void Renderer::drawCar(const Car* car)
 {
 	drawQuad(mCarVBO, mCarTexture, car->getPosition(),
-			car->getOrientation());
+			car->getOrientation(), Color::White);
 }
 
-void Renderer::drawTrack()
+void Renderer::drawTrackSegment(const TSRender& ts)
 {
 	glBindTexture(GL_TEXTURE_2D, mAsphaltTexture->getTexture());
 	glUniform2f(mCameraUniform, -mCamPos.x, -mCamPos.y);
 	glUniform1f(mOrientationUniform, 0.0f);
+	glUniform4f(mColorUniform, 1.0f, 1.0f, 1.0f, 1.0f);
 
-	glBindBuffer(GL_ARRAY_BUFFER, mTrackVBO[0]);
+	glBindBuffer(GL_ARRAY_BUFFER, ts.VBO[0]);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-	glBindBuffer(GL_ARRAY_BUFFER, mTrackVBO[1]);
+	glBindBuffer(GL_ARRAY_BUFFER, ts.VBO[1]);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, mTrackElemCount);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, ts.ElemCount);
+}
+
+void Renderer::drawTrack()
+{
+	for(const auto& t : mTrackSegments) {
+		drawTrackSegment(t);
+	}
 }
 
 void Renderer::drawGrass()
 {
-	drawQuad(mGrassVBO, mGrassTexture, Common::Vector2(), 0.0f);
+	drawQuad(mGrassVBO, mGrassTexture, Common::Vector2(), 0.0f, Color::White);
+}
+
+void Renderer::drawDebugPoints()
+{
+	for(const auto& p : mDebugPoints.Points) {
+		if(p.VBO[0])
+			drawQuad(p.VBO, mAsphaltTexture, p.Pos, 0.0f, p.Color);
+	}
 }
 
 void Renderer::drawQuad(const GLuint vbo[3],
 		const Common::Texture* texture, const Common::Vector2& pos,
-		float orient)
+		float orient, const Common::Color& col)
 {
 	glBindTexture(GL_TEXTURE_2D, texture->getTexture());
 	glUniform2f(mCameraUniform, -mCamPos.x + pos.x, -mCamPos.y + pos.y);
 	glUniform1f(mOrientationUniform, orient);
+	glUniform4f(mColorUniform, col.r / 255.0f, col.g / 255.0f, col.b / 255.0f, 1.0f);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);

@@ -203,27 +203,39 @@ void Car::setSteering(float value)
 
 void Car::moved()
 {
+	int offroad = 0;
 	const auto& pos = mRigidBody.position;
 	if(mTrack->onTrack(pos + mLBTyreForce.getAttachPosition())) {
 		mLBTyreForce.setTyreConfig(NormalTyreConfig);
 	} else {
 		mLBTyreForce.setTyreConfig(OffroadTyreConfig);
+		offroad++;
 	}
 	if(mTrack->onTrack(pos + mRBTyreForce.getAttachPosition())) {
 		mRBTyreForce.setTyreConfig(NormalTyreConfig);
 	} else {
 		mRBTyreForce.setTyreConfig(OffroadTyreConfig);
+		offroad++;
 	}
 	if(mTrack->onTrack(pos + mLFTyreForce.getAttachPosition())) {
 		mLFTyreForce.setTyreConfig(NormalTyreConfig);
 	} else {
 		mLFTyreForce.setTyreConfig(OffroadTyreConfig);
+		offroad++;
 	}
 	if(mTrack->onTrack(pos + mRFTyreForce.getAttachPosition())) {
 		mRFTyreForce.setTyreConfig(NormalTyreConfig);
 	} else {
 		mRFTyreForce.setTyreConfig(OffroadTyreConfig);
+		offroad++;
 	}
+
+	mOffroad = offroad == 4;
+}
+
+bool Car::isOffroad() const
+{
+	return mOffroad;
 }
 
 
