@@ -83,7 +83,6 @@ CurveSegment::CurveSegment(const Common::Vector2& startpos,
 		len += p1.distance(p2);
 	}
 	mNumApproxSegments = 5 + pow(len, 0.5f);
-	std::cout << len << "\t" << mNumApproxSegments << "\n";
 
 	// Create lines that estimate the curve for onTrack() query.
 	for(size_t i = 0; i < mNumApproxSegments; i++) {
