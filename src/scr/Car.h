@@ -47,6 +47,8 @@ class Car {
 		Abyss::RigidBody* getBody();
 		void moved();
 		bool isOffroad() const;
+		float getWidth() const;
+		float getLength() const;
 
 	private:
 		float mWidth;

@@ -137,7 +137,6 @@ bool Renderer::init()
 	glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
 
 	loadTextures();
-	loadCarVBO();
 	loadDebugVBO();
 
 	bool error = false;
@@ -165,12 +164,13 @@ void Renderer::loadTextures()
 	mGrassTexture = new Common::Texture("share/grass.png");
 }
 
-void Renderer::loadCarVBO()
+void Renderer::loadCarVBO(const Car* car)
 {
-	GLfloat vertices[] = {0.5f, 0.5f,
-		0.5f, -0.5f,
-		-0.5f, 0.5f,
-		-0.5f, -0.5f};
+	float w = car->getWidth();
+	GLfloat vertices[] = {w, w,
+		w, -w,
+		-w, w,
+		-w, -w};
 	GLfloat texcoord[] = {1.0f, 0.0f,
 		1.0f, 1.0f,
 		0.0f, 0.0f,
@@ -288,12 +288,13 @@ void Renderer::drawFrame(const GameWorld* w)
 	glUniform1i(mTextureUniform, 0);
 
 	auto track = w->getTrack();
+	auto car = w->getCar();
 	if(mTrackSegments.empty()) {
+		loadCarVBO(car);
 		loadTrackVBO(track);
 		loadGrassVBO(track);
 	}
 
-	auto car = w->getCar();
 	auto carpos = car->getPosition();
 	glUniform1f(mZoomUniform, mZoom);
 

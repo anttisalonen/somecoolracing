@@ -56,7 +56,7 @@ class Renderer {
 	private:
 		bool initGL();
 		void loadTextures();
-		void loadCarVBO();
+		void loadCarVBO(const Car* car);
 		void loadGrassVBO(const Track* t);
 		void loadTrackVBO(const Track* t);
 		void loadDebugVBO();

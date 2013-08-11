@@ -238,4 +238,14 @@ bool Car::isOffroad() const
 	return mOffroad;
 }
 
+float Car::getWidth() const
+{
+	return mWidth;
+}
+
+float Car::getLength() const
+{
+	return mLength;
+}
+
 
