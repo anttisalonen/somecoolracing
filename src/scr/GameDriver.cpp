@@ -2,8 +2,10 @@
 
 #include "common/Math.h"
 
-GameDriver::GameDriver(unsigned int screenWidth, unsigned int screenHeight, const char* caption)
+GameDriver::GameDriver(unsigned int screenWidth, unsigned int screenHeight,
+		const char* caption, const char* carname)
 	: Driver(screenWidth, screenHeight, caption),
+	mWorld(carname),
 	mRenderer(screenWidth, screenHeight),
 	mDebugDisplay(0.2f)
 {
@@ -100,6 +102,12 @@ bool GameDriver::handleKeyDown(float frameTime, SDLKey key)
 		case SDLK_MINUS:
 		case SDLK_KP_MINUS:
 			mZoomSpeed = 1.0f;
+			break;
+
+		case SDLK_r:
+			if(SDL_GetModState() & KMOD_SHIFT) {
+				mWorld.resetCar();
+			}
 			break;
 
 		default:

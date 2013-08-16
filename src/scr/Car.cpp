@@ -74,7 +74,6 @@ void TyreForce::setThrottle(float f)
 
 void TyreForce::setBrake(float f)
 {
-	assert(f >= 0.0f && f <= 1.0f);
 	mBrake = f;
 }
 
@@ -88,6 +87,23 @@ const Common::Vector2& TyreForce::getAttachPosition() const
 	return mAttachPos;
 }
 
+DragForce::DragForce(float k1, float k2)
+	: mK1(k1),
+	mK2(k2)
+{
+}
+
+void DragForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
+{
+	Common::Vector2 force = body->velocity;
+	Abyss::Real dragCoeff = force.length();
+	dragCoeff = mK1 * dragCoeff + mK2 * dragCoeff * dragCoeff;
+
+	force.normalize();
+	force *= -dragCoeff;
+	body->addForce(force);
+}
+
 Car::Car(const CarConfig* carconf, Abyss::World* world, const Track* track)
 	: mCarConfig(*carconf),
 	mWidth(carconf->Width),
@@ -97,6 +113,7 @@ Car::Car(const CarConfig* carconf, Abyss::World* world, const Track* track)
 	mRBTyreForce(TyreForce(Vector2(carconf->Wheelbase * 0.5f, -mWidth * 0.5f))),
 	mLFTyreForce(TyreForce(Vector2(-carconf->Wheelbase * 0.5f, mWidth * 0.5f))),
 	mRFTyreForce(TyreForce(Vector2(carconf->Wheelbase * 0.5f, mWidth * 0.5f))),
+	mDragForce(DragForce(carconf->DragCoefficient, carconf->DragCoefficient2)),
 	mTrack(track)
 {
 	mRigidBody.setMass(mCarConfig.Mass);
@@ -108,6 +125,7 @@ Car::Car(const CarConfig* carconf, Abyss::World* world, const Track* track)
 	mPhysicsWorld->getForceRegistry()->add(&mRigidBody, &mRBTyreForce);
 	mPhysicsWorld->getForceRegistry()->add(&mRigidBody, &mLFTyreForce);
 	mPhysicsWorld->getForceRegistry()->add(&mRigidBody, &mRFTyreForce);
+	mPhysicsWorld->getForceRegistry()->add(&mRigidBody, &mDragForce);
 
 	mLBTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
 	mRBTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
@@ -121,6 +139,7 @@ Car::~Car()
 	mPhysicsWorld->getForceRegistry()->remove(&mRigidBody, &mRBTyreForce);
 	mPhysicsWorld->getForceRegistry()->remove(&mRigidBody, &mLFTyreForce);
 	mPhysicsWorld->getForceRegistry()->remove(&mRigidBody, &mRFTyreForce);
+	mPhysicsWorld->getForceRegistry()->remove(&mRigidBody, &mDragForce);
 	mPhysicsWorld->removeBody(&mRigidBody);
 }
 
@@ -132,6 +151,21 @@ const Common::Vector2& Car::getPosition() const
 void Car::setPosition(const Common::Vector2& pos)
 {
 	mRigidBody.position = pos;
+}
+
+void Car::setVelocity(const Common::Vector2& vel)
+{
+	mRigidBody.velocity = vel;
+}
+
+void Car::setOrientation(float o)
+{
+	mRigidBody.orientation = Common::Math::rotate2D(Vector2(1.0f, 0.0f), o);
+}
+
+void Car::setAngularVelocity(float o)
+{
+	mRigidBody.rotation = o;
 }
 
 float Car::getOrientation() const
@@ -159,8 +193,8 @@ Abyss::RigidBody* Car::getBody()
 void Car::setBrake(float value)
 {
 	assert(value >= 0.0f && value <= 1.0f);
-	mLBTyreForce.setBrake(value);
-	mRBTyreForce.setBrake(value);
+	mLBTyreForce.setBrake(value * mCarConfig.BrakeCoefficient);
+	mRBTyreForce.setBrake(value * mCarConfig.BrakeCoefficient);
 }
 
 void Car::setSteering(float value)
@@ -236,7 +270,10 @@ CarConfig Car::readCarConfig(const char* filename)
 	cc.AngularDamping = root["angularDamping"].asDouble();
 	cc.Wheelbase = root["wheelbase"].asDouble();
 	cc.ThrottleCoefficient = root["throttle"].asDouble();
+	cc.BrakeCoefficient = root["brake"].asDouble();
 	cc.SteeringCoefficient = root["steeringCoeff"].asDouble();
+	cc.DragCoefficient = root["dragCoeff"].asDouble();
+	cc.DragCoefficient2 = root["dragCoeff2"].asDouble();
 
 	const auto& at = root["tyres"]["asphalt"];
 	cc.AsphaltTyres.mCorneringForceCoefficient      = at["corneringCoeff"].asDouble();

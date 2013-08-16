@@ -32,6 +32,16 @@ class TyreForce : public Abyss::ForceGenerator {
 		TyreConfig mTyreConfig;
 };
 
+class DragForce : public Abyss::ForceGenerator {
+	public:
+		DragForce(float k1, float k2);
+		virtual void updateForce(Abyss::RigidBody* body, Abyss::Real duration) override;
+
+	private:
+		float mK1;
+		float mK2;
+};
+
 struct CarConfig {
 	float Width = 2.0f;
 	float Length = 5.0f;
@@ -41,7 +51,10 @@ struct CarConfig {
 	TyreConfig AsphaltTyres;
 	TyreConfig GrassTyres;
 	float ThrottleCoefficient = 100.0f;
+	float BrakeCoefficient = 1.0f;
 	float SteeringCoefficient = 0.2f;
+	float DragCoefficient = 1.0f;
+	float DragCoefficient2 = 1.0f;
 };
 
 class Car {
@@ -52,6 +65,9 @@ class Car {
 		Car& operator=(const Car&) = delete;
 		const Common::Vector2& getPosition() const;
 		void setPosition(const Common::Vector2& pos);
+		void setVelocity(const Common::Vector2& vel);
+		void setOrientation(float o);
+		void setAngularVelocity(float o);
 		float getOrientation() const;
 		float getSpeed() const;
 		void setThrottle(float value);
@@ -76,6 +92,7 @@ class Car {
 		TyreForce mRBTyreForce;
 		TyreForce mLFTyreForce;
 		TyreForce mRFTyreForce;
+		DragForce mDragForce;
 		const Track* mTrack;
 		bool mOffroad = false;
 };

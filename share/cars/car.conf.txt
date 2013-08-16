@@ -1,0 +1,29 @@
+{
+	"name" : "Stock car",   // unique car name
+	"mass" : 1565.0,        // in kg
+	"length" : 5.23,        // in m
+	"width" : 1.99,         // in m
+	"angularDamping" : 0.2, // strictly 0.1 and 1.0 - recommended between 0.2 and 0.6
+	"wheelbase" : 2.79,     // in m, must be less than length
+	"throttle" : 25000.0,
+	"steeringCoeff" : 0.2,  // strictly between 0.0 and 1.0, recommended 0.2
+	"brake" : 1.0,          // strictly above 0.0, recommended 1.0
+	"dragCoeff" : 1.0,      // drag linear to speed
+	"dragCoeff2" : 1.0,     // drag quadratic to speed
+	"tyres" : {
+		"asphalt" : {
+			"corneringCoeff" : 20000.0,      // lateral force - increasing improves rotation and
+                                                         // reduces understeer/adds oversteer
+			"selfAligningCoeff" : 200.0,     // force pushing forward - increasing leads to more grip when turning
+			"rollingFrictionCoeff" : 200.0,  // force pushing back, must be more than selfAligningCoeff
+                                                         // increasing leads to more speed loss when turning
+			"brakeCoeff" : 10.0              // recommended between 5.0 and 20.0
+		},
+		"grass" : {
+			"corneringCoeff" : 20000.0,
+			"selfAligningCoeff" : 20.0,
+			"rollingFrictionCoeff" : 240.0,
+			"brakeCoeff" : 10.0
+		}
+	},
+}

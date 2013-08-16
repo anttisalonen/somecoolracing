@@ -7,12 +7,13 @@
 
 class GameWorld {
 	public:
-		GameWorld();
+		GameWorld(const char* carname);
 		~GameWorld();
 		void updatePhysics(float time);
 		const Car* getCar() const;
 		Car* getCar();
 		const Track* getTrack() const;
+		void resetCar();
 
 	private:
 		Abyss::World mPhysicsWorld;

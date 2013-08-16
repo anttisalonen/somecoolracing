@@ -1,8 +1,9 @@
 #include "GameWorld.h"
 
-GameWorld::GameWorld()
+GameWorld::GameWorld(const char* carname)
 {
-	auto carConfig = Car::readCarConfig("share/car.conf");
+	std::string carconfig = "share/cars/" + std::string(carname) + ".conf";
+	auto carConfig = Car::readCarConfig(carconfig.c_str());
 	mCar = new Car(&carConfig, &mPhysicsWorld, &mTrack);
 }
 
@@ -44,4 +45,11 @@ const Track* GameWorld::getTrack() const
 	return &mTrack;
 }
 
+void GameWorld::resetCar()
+{
+	mCar->setPosition(Common::Vector2());
+	mCar->setVelocity(Common::Vector2());
+	mCar->setOrientation(0.0f);
+	mCar->setAngularVelocity(0.0f);
+}
 

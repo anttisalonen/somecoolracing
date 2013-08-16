@@ -11,7 +11,8 @@
 
 class GameDriver : public Common::Driver {
 	public:
-		GameDriver(unsigned int screenWidth, unsigned int screenHeight, const char* caption);
+		GameDriver(unsigned int screenWidth, unsigned int screenHeight,
+				const char* caption, const char* carname);
 		bool init() override;
 		bool prerenderUpdate(float frameTime) override;
 		void drawFrame() override;
@@ -22,8 +23,8 @@ class GameDriver : public Common::Driver {
 		bool handleMousePress(float frameTime, Uint8 button) override;
 
 	private:
-		Renderer mRenderer;
 		GameWorld mWorld;
+		Renderer mRenderer;
 
 		float mThrottle = 0.0f;
 		float mBrake = 0.0f;
