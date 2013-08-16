@@ -213,7 +213,7 @@ void Renderer::loadGrassVBO(const Track* t)
 		tr.x, bl.y,
 		bl.x, tr.y,
 		bl.x, bl.y};
-	const float texScale = 0.1f;
+	const float texScale = 0.01f;
 	GLfloat texcoord[] = {tr.x * texScale, bl.y * texScale,
 		tr.x * texScale, tr.y * texScale,
 		bl.x * texScale, bl.y * texScale,
@@ -252,8 +252,8 @@ void Renderer::loadTrackVBO(const Track* t)
 		for(const auto& t : triStrip) {
 			vertexdata.push_back(t.x);
 			vertexdata.push_back(t.y);
-			texcoorddata.push_back(t.x * 0.1f);
-			texcoorddata.push_back(t.y * 0.1f);
+			texcoorddata.push_back(t.x * 0.01f);
+			texcoorddata.push_back(t.y * 0.01f);
 		}
 
 		glBindBuffer(GL_ARRAY_BUFFER, r.VBO[0]);
