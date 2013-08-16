@@ -4,38 +4,14 @@
 #include <fstream>
 #include <sstream>
 
+#include <jsoncpp/json/json.h>
+
 #include "Car.h"
 
 #include "common/Math.h"
 
 using Common::Vector2;
 
-
-TyreConfig Car::NormalTyreConfig;
-TyreConfig Car::OffroadTyreConfig;
-
-void Car::initTyreConfigs()
-{
-	using namespace std;
-	static bool init = false;
-	if(!init) {
-		init = true;
-		ifstream source;
-		source.open("share/tyre.conf", ios_base::in);
-
-		string line;
-		while(getline(source, line)) {
-			istringstream in(line);
-			in >> NormalTyreConfig.mCorneringForceCoefficient >>
-				NormalTyreConfig.mSelfAligningTorqueCoefficient >>
-				NormalTyreConfig.mRollingFrictionCoefficient;
-		}
-	}
-
-	OffroadTyreConfig.mCorneringForceCoefficient = NormalTyreConfig.mCorneringForceCoefficient * 1.0f;
-	OffroadTyreConfig.mSelfAligningTorqueCoefficient = NormalTyreConfig.mSelfAligningTorqueCoefficient * 0.1f;
-	OffroadTyreConfig.mRollingFrictionCoefficient = NormalTyreConfig.mRollingFrictionCoefficient * 1.2f;
-}
 
 TyreForce::TyreForce(const Vector2& attachpos)
 	: mAttachPos(attachpos)
@@ -65,7 +41,7 @@ void TyreForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
 		auto ang = 0.0f;
 		if(speed > 0.5)
 			ang = std::max<float>(mBrake, slipAngle);
-		rollingFriction = rollingFriction * (1.0f + ang * 2.0f);
+		rollingFriction = rollingFriction * (1.0f + ang * mTyreConfig.mBrakeCoefficient);
 
 		assert(!isnan(latForce.x));
 		assert(!isnan(selfAlign.x));
@@ -75,7 +51,7 @@ void TyreForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
 
 	// throttle
 	if(mThrottle)
-		force = force + tyreDir * mThrottle * 25000.0f;
+		force = force + tyreDir * mThrottle;
 
 	if(!force.null()) {
 		Vector2 lws = body->getPointInWorldSpace(mAttachPos);
@@ -93,7 +69,6 @@ void TyreForce::setAngle(float f)
 
 void TyreForce::setThrottle(float f)
 {
-	assert(f >= 0.0f && f <= 1.0f);
 	mThrottle = f;
 }
 
@@ -113,20 +88,20 @@ const Common::Vector2& TyreForce::getAttachPosition() const
 	return mAttachPos;
 }
 
-Car::Car(float w, float l, Abyss::World* world, const Track* track)
-	: mWidth(w),
-	mLength(l),
+Car::Car(const CarConfig* carconf, Abyss::World* world, const Track* track)
+	: mCarConfig(*carconf),
+	mWidth(carconf->Width),
+	mLength(carconf->Length),
 	mPhysicsWorld(world),
-	mLBTyreForce(TyreForce(Vector2(-mLength * 0.5f, -mWidth * 0.45f))),
-	mRBTyreForce(TyreForce(Vector2(mLength * 0.5f, -mWidth * 0.45f))),
-	mLFTyreForce(TyreForce(Vector2(-mLength * 0.5f, mWidth * 0.45f))),
-	mRFTyreForce(TyreForce(Vector2(mLength * 0.5f, mWidth * 0.45f))),
+	mLBTyreForce(TyreForce(Vector2(-carconf->Wheelbase * 0.5f, -mWidth * 0.5f))),
+	mRBTyreForce(TyreForce(Vector2(carconf->Wheelbase * 0.5f, -mWidth * 0.5f))),
+	mLFTyreForce(TyreForce(Vector2(-carconf->Wheelbase * 0.5f, mWidth * 0.5f))),
+	mRFTyreForce(TyreForce(Vector2(carconf->Wheelbase * 0.5f, mWidth * 0.5f))),
 	mTrack(track)
 {
-	const float mass = 1000.0f;
-	mRigidBody.setMass(mass);
-	mRigidBody.setInertiaTensor(mass * (1.0 / 12.0) * ((mWidth * mWidth) + (mLength * mLength)));
-	mRigidBody.angularDamping = 0.6;
+	mRigidBody.setMass(mCarConfig.Mass);
+	mRigidBody.setInertiaTensor(mCarConfig.Mass * (1.0 / 12.0) * ((mWidth * mWidth) + (mLength * mLength)));
+	mRigidBody.angularDamping = mCarConfig.AngularDamping;
 
 	mPhysicsWorld->addBody(&mRigidBody);
 	mPhysicsWorld->getForceRegistry()->add(&mRigidBody, &mLBTyreForce);
@@ -134,11 +109,10 @@ Car::Car(float w, float l, Abyss::World* world, const Track* track)
 	mPhysicsWorld->getForceRegistry()->add(&mRigidBody, &mLFTyreForce);
 	mPhysicsWorld->getForceRegistry()->add(&mRigidBody, &mRFTyreForce);
 
-	initTyreConfigs();
-	mLBTyreForce.setTyreConfig(NormalTyreConfig);
-	mRBTyreForce.setTyreConfig(NormalTyreConfig);
-	mLFTyreForce.setTyreConfig(NormalTyreConfig);
-	mRFTyreForce.setTyreConfig(NormalTyreConfig);
+	mLBTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
+	mRBTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
+	mLFTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
+	mRFTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
 }
 
 Car::~Car()
@@ -173,8 +147,8 @@ float Car::getSpeed() const
 void Car::setThrottle(float value)
 {
 	assert(value >= 0.0f && value <= 1.0f);
-	mLBTyreForce.setThrottle(value);
-	mRBTyreForce.setThrottle(value);
+	mLBTyreForce.setThrottle(value * mCarConfig.ThrottleCoefficient);
+	mRBTyreForce.setThrottle(value * mCarConfig.ThrottleCoefficient);
 }
 
 Abyss::RigidBody* Car::getBody()
@@ -193,8 +167,8 @@ void Car::setSteering(float value)
 {
 	value = Common::clamp(-1.0f, value, 1.0f);
 	mSteering = -value;
-	mLFTyreForce.setAngle(mSteering * 0.2f);
-	mRFTyreForce.setAngle(mSteering * 0.2f);
+	mLFTyreForce.setAngle(mSteering * mCarConfig.SteeringCoefficient);
+	mRFTyreForce.setAngle(mSteering * mCarConfig.SteeringCoefficient);
 }
 
 void Car::moved()
@@ -202,27 +176,27 @@ void Car::moved()
 	int offroad = 0;
 	const auto& pos = mRigidBody.position;
 	if(mTrack->onTrack(pos + mLBTyreForce.getAttachPosition())) {
-		mLBTyreForce.setTyreConfig(NormalTyreConfig);
+		mLBTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
 	} else {
-		mLBTyreForce.setTyreConfig(OffroadTyreConfig);
+		mLBTyreForce.setTyreConfig(mCarConfig.GrassTyres);
 		offroad++;
 	}
 	if(mTrack->onTrack(pos + mRBTyreForce.getAttachPosition())) {
-		mRBTyreForce.setTyreConfig(NormalTyreConfig);
+		mRBTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
 	} else {
-		mRBTyreForce.setTyreConfig(OffroadTyreConfig);
+		mRBTyreForce.setTyreConfig(mCarConfig.GrassTyres);
 		offroad++;
 	}
 	if(mTrack->onTrack(pos + mLFTyreForce.getAttachPosition())) {
-		mLFTyreForce.setTyreConfig(NormalTyreConfig);
+		mLFTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
 	} else {
-		mLFTyreForce.setTyreConfig(OffroadTyreConfig);
+		mLFTyreForce.setTyreConfig(mCarConfig.GrassTyres);
 		offroad++;
 	}
 	if(mTrack->onTrack(pos + mRFTyreForce.getAttachPosition())) {
-		mRFTyreForce.setTyreConfig(NormalTyreConfig);
+		mRFTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
 	} else {
-		mRFTyreForce.setTyreConfig(OffroadTyreConfig);
+		mRFTyreForce.setTyreConfig(mCarConfig.GrassTyres);
 		offroad++;
 	}
 
@@ -244,4 +218,38 @@ float Car::getLength() const
 	return mLength;
 }
 
+CarConfig Car::readCarConfig(const char* filename)
+{
+	Json::Reader reader;
+	Json::Value root;
+
+	std::ifstream input(filename, std::ifstream::binary);
+	bool parsingSuccessful = reader.parse(input, root, false);
+	if (!parsingSuccessful) {
+		throw std::runtime_error(reader.getFormatedErrorMessages());
+	}
+
+	CarConfig cc;
+	cc.Width = root["width"].asDouble();
+	cc.Length = root["length"].asDouble();
+	cc.Mass = root["mass"].asDouble();
+	cc.AngularDamping = root["angularDamping"].asDouble();
+	cc.Wheelbase = root["wheelbase"].asDouble();
+	cc.ThrottleCoefficient = root["throttle"].asDouble();
+	cc.SteeringCoefficient = root["steeringCoeff"].asDouble();
+
+	const auto& at = root["tyres"]["asphalt"];
+	cc.AsphaltTyres.mCorneringForceCoefficient      = at["corneringCoeff"].asDouble();
+	cc.AsphaltTyres.mSelfAligningTorqueCoefficient  = at["selfAligningCoeff"].asDouble();
+	cc.AsphaltTyres.mRollingFrictionCoefficient     = at["rollingFrictionCoeff"].asDouble();
+	cc.AsphaltTyres.mBrakeCoefficient               = at["brakeCoeff"].asDouble();
+
+	const auto& gt = root["tyres"]["grass"];
+	cc.GrassTyres.mCorneringForceCoefficient      = gt["corneringCoeff"].asDouble();
+	cc.GrassTyres.mSelfAligningTorqueCoefficient  = gt["selfAligningCoeff"].asDouble();
+	cc.GrassTyres.mRollingFrictionCoefficient     = gt["rollingFrictionCoeff"].asDouble();
+	cc.GrassTyres.mBrakeCoefficient               = gt["brakeCoeff"].asDouble();
+
+	return cc;
+}
 

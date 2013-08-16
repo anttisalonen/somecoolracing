@@ -5,7 +5,7 @@ CXXFLAGS += -std=c++11 -Wall
 
 CXXFLAGS += $(shell sdl-config --cflags)
 LDFLAGS  += $(shell sdl-config --libs) \
-		  -lSDL_image -lSDL_ttf -lGL -lGLEW
+		  -lSDL_image -lSDL_ttf -lGL -lGLEW -ljsoncpp
 
 CXXFLAGS += -Isrc
 BINDIR       = bin

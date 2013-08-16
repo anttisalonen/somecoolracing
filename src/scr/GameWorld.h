@@ -17,7 +17,7 @@ class GameWorld {
 	private:
 		Abyss::World mPhysicsWorld;
 		Track mTrack;
-		Car mCar;
+		Car* mCar = nullptr;
 };
 
 #endif

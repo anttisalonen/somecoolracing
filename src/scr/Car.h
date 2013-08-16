@@ -8,9 +8,10 @@
 #include "Track.h"
 
 struct TyreConfig {
-	float mCorneringForceCoefficient = 0.0f;
-	float mSelfAligningTorqueCoefficient = 0.0f;
-	float mRollingFrictionCoefficient = 0.0f;
+	float mCorneringForceCoefficient = 100.0f;
+	float mSelfAligningTorqueCoefficient = 100.0f;
+	float mRollingFrictionCoefficient = 100.0f;
+	float mBrakeCoefficient = 10.0f;
 };
 
 class TyreForce : public Abyss::ForceGenerator {
@@ -31,9 +32,21 @@ class TyreForce : public Abyss::ForceGenerator {
 		TyreConfig mTyreConfig;
 };
 
+struct CarConfig {
+	float Width = 2.0f;
+	float Length = 5.0f;
+	float Mass = 1000.0f;
+	float AngularDamping = 0.9f;
+	float Wheelbase = 3.5f;
+	TyreConfig AsphaltTyres;
+	TyreConfig GrassTyres;
+	float ThrottleCoefficient = 100.0f;
+	float SteeringCoefficient = 0.2f;
+};
+
 class Car {
 	public:
-		Car(float w, float l, Abyss::World* world, const Track* track);
+		Car(const CarConfig* carconf, Abyss::World* world, const Track* track);
 		~Car();
 		Car(const Car&) = delete;
 		Car& operator=(const Car&) = delete;
@@ -50,7 +63,10 @@ class Car {
 		float getWidth() const;
 		float getLength() const;
 
+		static CarConfig readCarConfig(const char* filename);
+
 	private:
+		CarConfig mCarConfig;
 		float mWidth;
 		float mLength;
 		float mSteering = 0.0f;
@@ -62,10 +78,6 @@ class Car {
 		TyreForce mRFTyreForce;
 		const Track* mTrack;
 		bool mOffroad = false;
-
-		static void initTyreConfigs();
-		static TyreConfig NormalTyreConfig;
-		static TyreConfig OffroadTyreConfig;
 };
 
 #endif
