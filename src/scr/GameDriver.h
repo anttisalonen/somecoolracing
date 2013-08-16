@@ -28,6 +28,7 @@ class GameDriver : public Common::Driver {
 		float mThrottle = 0.0f;
 		float mBrake = 0.0f;
 		float mSteering = 0.0f;
+		float mSteeringVelocity = 0.0f;
 		float mZoomSpeed = 0.0f;
 		float mZoom = 0.15f;
 

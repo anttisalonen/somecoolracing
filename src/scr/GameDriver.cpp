@@ -26,6 +26,25 @@ bool GameDriver::prerenderUpdate(float frameTime)
 		car->setThrottle(mThrottle);
 	if(!mThrottle)
 		car->setBrake(mBrake);
+
+	if((mSteeringVelocity > 0.0f && mSteering < 0.0f) ||
+			(mSteeringVelocity < 0.0f && mSteering > 0.0f))
+		mSteering = 0.0f;
+
+	if(mSteeringVelocity) {
+		mSteering += mSteeringVelocity * frameTime;
+		mSteering = Common::clamp(-1.0f, mSteering, 1.0f);
+	}
+
+	if(!mSteeringWithMouse && mSteeringVelocity == 0.0f && mSteering != 0.0f) {
+		if(fabs(mSteering) < 4.0f * frameTime)
+			mSteering = 0.0f;
+		else if(mSteering < 0.0f)
+			mSteering += 4.0f * frameTime;
+		else if(mSteering > 0.0f)
+			mSteering -= 4.0f * frameTime;
+	}
+
 	car->setSteering(mSteering);
 	mWorld.updatePhysics(frameTime);
 	mZoom += mZoomSpeed * frameTime;
@@ -56,12 +75,12 @@ bool GameDriver::handleKeyDown(float frameTime, SDLKey key)
 
 		case SDLK_a:
 			if(!mSteeringWithMouse)
-				mSteering = -1.0f;
+				mSteeringVelocity = -2.0f;
 			break;
 
 		case SDLK_d:
 			if(!mSteeringWithMouse)
-				mSteering = 1.0f;
+				mSteeringVelocity = 2.0f;
 			break;
 
 		case SDLK_c:
@@ -105,12 +124,12 @@ bool GameDriver::handleKeyUp(float frameTime, SDLKey key)
 
 		case SDLK_a:
 			if(!mSteeringWithMouse)
-				mSteering = 0.0f;
+				mSteeringVelocity = 0.0f;
 			break;
 
 		case SDLK_d:
 			if(!mSteeringWithMouse)
-				mSteering = 0.0f;
+				mSteeringVelocity = 0.0f;
 			break;
 
 		case SDLK_PLUS:
@@ -159,6 +178,7 @@ bool GameDriver::handleMousePress(float frameTime, Uint8 button)
 		mSteeringWithMouse = !mSteeringWithMouse;
 		if(mSteeringWithMouse) {
 			mSteering = 0.0f;
+			mSteeringVelocity = 0.0f;
 			mThrottle = 0.0f;
 			mBrake = 0.0f;
 			SDL_WarpMouse(getScreenWidth() / 2, getScreenHeight() / 2);
