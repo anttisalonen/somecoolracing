@@ -145,7 +145,7 @@ Common::Vector2 CurveSegment::directionOnCurve(float t) const
 
 Track::Track()
 {
-	const float width = 15.0f;
+	const float width = 20.0f;
 	auto s1 = new StraightTrackSegment(Vector2(0.0f, 0.0f),
 				Vector2(1.0f, 0.0f),
 				200.0f, width);
