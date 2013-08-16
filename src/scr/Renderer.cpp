@@ -178,7 +178,7 @@ void Renderer::loadTextures()
 
 void Renderer::loadCarVBO(const Car* car)
 {
-	float w = car->getWidth();
+	float w = car->getLength();
 	GLfloat vertices[] = {w, w,
 		w, -w,
 		-w, w,
