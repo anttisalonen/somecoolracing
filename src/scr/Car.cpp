@@ -181,8 +181,15 @@ float Car::getSpeed() const
 void Car::setThrottle(float value)
 {
 	assert(value >= 0.0f && value <= 1.0f);
-	mLBTyreForce.setThrottle(value * mCarConfig.ThrottleCoefficient);
-	mRBTyreForce.setThrottle(value * mCarConfig.ThrottleCoefficient);
+	if(mCarConfig.RearWheelDrive) {
+		mLBTyreForce.setThrottle(value * mCarConfig.ThrottleCoefficient);
+		mRBTyreForce.setThrottle(value * mCarConfig.ThrottleCoefficient);
+	}
+
+	if(mCarConfig.FrontWheelDrive) {
+		mLFTyreForce.setThrottle(value * mCarConfig.ThrottleCoefficient);
+		mRFTyreForce.setThrottle(value * mCarConfig.ThrottleCoefficient);
+	}
 }
 
 Abyss::RigidBody* Car::getBody()
@@ -274,6 +281,9 @@ CarConfig Car::readCarConfig(const char* filename)
 	cc.SteeringCoefficient = root["steeringCoeff"].asDouble();
 	cc.DragCoefficient = root["dragCoeff"].asDouble();
 	cc.DragCoefficient2 = root["dragCoeff2"].asDouble();
+
+	cc.RearWheelDrive = root["rearWheelDrive"].asBool();
+	cc.FrontWheelDrive = root["frontWheelDrive"].asBool();
 
 	const auto& at = root["tyres"]["asphalt"];
 	cc.AsphaltTyres.mCorneringForceCoefficient      = at["corneringCoeff"].asDouble();

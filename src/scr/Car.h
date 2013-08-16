@@ -55,6 +55,8 @@ struct CarConfig {
 	float SteeringCoefficient = 0.2f;
 	float DragCoefficient = 1.0f;
 	float DragCoefficient2 = 1.0f;
+	bool  RearWheelDrive = true;
+	bool  FrontWheelDrive = false;
 };
 
 class Car {

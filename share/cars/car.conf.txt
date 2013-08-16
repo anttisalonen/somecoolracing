@@ -10,6 +10,8 @@
 	"brake" : 1.0,          // strictly above 0.0, recommended 1.0
 	"dragCoeff" : 1.0,      // drag linear to speed
 	"dragCoeff2" : 1.0,     // drag quadratic to speed
+	"rearWheelDrive" : true,   // for four-wheel-drive set both to true
+	"frontWheelDrive" : false,
 	"tyres" : {
 		"asphalt" : {
 			"corneringCoeff" : 20000.0,      // lateral force - increasing improves rotation and
