@@ -153,7 +153,7 @@ bool Renderer::init()
 
 float Renderer::setZoom(float z)
 {
-	mZoom = Common::clamp(0.01f, z, 1.0f);
+	mZoom = Common::clamp(0.01f, z, 2.0f);
 	return mZoom;
 }
 
@@ -213,7 +213,7 @@ void Renderer::loadGrassVBO(const Track* t)
 		tr.x, bl.y,
 		bl.x, tr.y,
 		bl.x, bl.y};
-	const float texScale = 0.01f;
+	const float texScale = 0.1f;
 	GLfloat texcoord[] = {tr.x * texScale, bl.y * texScale,
 		tr.x * texScale, tr.y * texScale,
 		bl.x * texScale, bl.y * texScale,
@@ -252,8 +252,8 @@ void Renderer::loadTrackVBO(const Track* t)
 		for(const auto& t : triStrip) {
 			vertexdata.push_back(t.x);
 			vertexdata.push_back(t.y);
-			texcoorddata.push_back(t.x * 0.01f);
-			texcoorddata.push_back(t.y * 0.01f);
+			texcoorddata.push_back(t.x * 0.08f);
+			texcoorddata.push_back(t.y * 0.08f);
 		}
 
 		glBindBuffer(GL_ARRAY_BUFFER, r.VBO[0]);
@@ -319,7 +319,8 @@ void Renderer::drawFrame(const GameWorld* w)
 	drawGrass();
 	drawTrack();
 	drawCar(car);
-	drawDebugPoints();
+	if(mDebugDisplay)
+		drawDebugPoints();
 	
 	glUniform1f(mZoomUniform, 1.0f);
 	drawTexts(w);
@@ -335,13 +336,28 @@ void Renderer::drawFrame(const GameWorld* w)
 
 void Renderer::updateDebug(const GameWorld* w)
 {
+	if(!mDebugDisplay)
+		return;
+
 	auto car = w->getCar();
 	auto pos = car->getPosition();
+	std::vector<Vector2> spots;
 
-	if(!w->getTrack()->onTrack(pos)) {
-		mDebugPoints.add(pos, Color::Red);
-	} else {
-		mDebugPoints.add(pos, Color::Blue);
+	float width = car->getWidth() * 0.5f;
+	float length = car->getWheelbase() * 0.5f;
+	float o = -car->getOrientation();
+
+	spots.push_back(pos + Math::rotate2D(Vector2(width, length), o));
+	spots.push_back(pos + Math::rotate2D(Vector2(-width, length), o));
+	spots.push_back(pos + Math::rotate2D(Vector2(width, -length), o));
+	spots.push_back(pos + Math::rotate2D(Vector2(-width, -length), o));
+
+	for(const auto& p : spots) {
+		if(!w->getTrack()->onTrack(p)) {
+			mDebugPoints.add(p, Color::Red);
+		} else {
+			mDebugPoints.add(p, Color::Blue);
+		}
 	}
 }
 
@@ -542,4 +558,10 @@ void Renderer::setCamOrientation(bool o)
 {
 	mCamOrientation = o;
 }
+
+void Renderer::toggleDebugDisplay()
+{
+	mDebugDisplay = !mDebugDisplay;
+}
+
 

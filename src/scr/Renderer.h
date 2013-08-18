@@ -33,6 +33,7 @@ struct DebugPointer {
 
 	void init();
 	void add(const Common::Vector2& pos, const Common::Color& col);
+	void clear();
 };
 
 class Text {
@@ -52,6 +53,7 @@ class Renderer {
 
 		float setZoom(float z);
 		void setSteering(float throttle, float brake, float steering);
+		void toggleDebugDisplay();
 		void updateDebug(const GameWorld* w);
 		void setCamOrientation(bool o);
 
@@ -109,6 +111,7 @@ class Renderer {
 		std::vector<std::string> mInfoTexts;
 		float mScreenOrientation = 0.0f;
 		bool mCamOrientation = false;
+		bool mDebugDisplay = false;
 };
 
 #endif

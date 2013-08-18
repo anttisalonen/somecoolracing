@@ -110,6 +110,12 @@ bool GameDriver::handleKeyDown(float frameTime, SDLKey key)
 			}
 			break;
 
+		case SDLK_m:
+			if(SDL_GetModState() & KMOD_CTRL) {
+				mRenderer.toggleDebugDisplay();
+			}
+			break;
+
 		default:
 			break;
 	}
