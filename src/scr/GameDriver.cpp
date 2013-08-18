@@ -91,7 +91,7 @@ bool GameDriver::handleKeyDown(float frameTime, SDLKey key)
 			break;
 
 		case SDLK_SPACE:
-			std::cout << mWorld.getCar()->getSpeed() << "\n";
+			std::cout << (mWorld.getCar()->getSpeed() * 3.6f) << "\n";
 			break;
 
 		case SDLK_PLUS:
