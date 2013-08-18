@@ -10,7 +10,7 @@
 
 #include "common/Math.h"
 
-using Common::Vector2;
+using namespace Common;
 
 
 TyreForce::TyreForce(const Vector2& attachpos)
@@ -22,7 +22,7 @@ void TyreForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
 {
 	Vector2 force;
 	Vector2 spinDir = body->orientation;
-	Vector2 tyreDir = Common::Math::rotate2D(spinDir, mAngle);
+	Vector2 tyreDir = Math::rotate2D(spinDir, mAngle);
 	Vector2 velDir = body->velocity.normalized();
 	float speed = body->velocity.length();
 	if(speed) {
@@ -30,7 +30,7 @@ void TyreForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
 		auto slipAngle = velDir.cross2d(tyreDir);
 		Vector2 latForce, rollingFriction;
 
-		latForce = Common::Math::rotate2D(tyreDir, HALF_PI);
+		latForce = Math::rotate2D(tyreDir, HALF_PI);
 		latForce = latForce * slipAngle * mTyreConfig.mCorneringForceCoefficient;
 
 		// self aligning torque - force in the direction of the tyre
@@ -61,7 +61,6 @@ void TyreForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
 
 void TyreForce::setAngle(float f)
 {
-	using namespace Common;
 	// 0.8f rad = 45 degrees
 	assert(f >= -0.7f && f <= 0.7f);
 	mAngle = f;
@@ -95,7 +94,7 @@ DragForce::DragForce(float k1, float k2)
 
 void DragForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
 {
-	Common::Vector2 force = body->velocity;
+	Vector2 force = body->velocity;
 	Abyss::Real dragCoeff = force.length();
 	dragCoeff = mK1 * dragCoeff + mK2 * dragCoeff * dragCoeff;
 
@@ -109,10 +108,10 @@ Car::Car(const CarConfig* carconf, Abyss::World* world, const Track* track)
 	mWidth(carconf->Width),
 	mLength(carconf->Length),
 	mPhysicsWorld(world),
-	mLBTyreForce(TyreForce(Vector2(-carconf->Wheelbase * 0.5f, -mWidth * 0.5f))),
-	mRBTyreForce(TyreForce(Vector2(carconf->Wheelbase * 0.5f, -mWidth * 0.5f))),
-	mLFTyreForce(TyreForce(Vector2(-carconf->Wheelbase * 0.5f, mWidth * 0.5f))),
-	mRFTyreForce(TyreForce(Vector2(carconf->Wheelbase * 0.5f, mWidth * 0.5f))),
+	mLBTyreForce(TyreForce(Vector2(-mWidth * 0.5f, -carconf->Wheelbase * 0.5f))),
+	mRBTyreForce(TyreForce(Vector2(mWidth * 0.5f, -carconf->Wheelbase * 0.5f))),
+	mLFTyreForce(TyreForce(Vector2(-mWidth * 0.5f, carconf->Wheelbase * 0.5f))),
+	mRFTyreForce(TyreForce(Vector2(mWidth * 0.5f, carconf->Wheelbase * 0.5f))),
 	mDragForce(DragForce(carconf->DragCoefficient, carconf->DragCoefficient2)),
 	mTrack(track)
 {
@@ -206,7 +205,7 @@ void Car::setBrake(float value)
 
 void Car::setSteering(float value)
 {
-	value = Common::clamp(-1.0f, value, 1.0f);
+	value = clamp(-1.0f, value, 1.0f);
 	mSteering = -value;
 	mLFTyreForce.setAngle(mSteering * mCarConfig.SteeringCoefficient);
 	mRFTyreForce.setAngle(mSteering * mCarConfig.SteeringCoefficient);
@@ -216,25 +215,26 @@ void Car::moved()
 {
 	int offroad = 0;
 	const auto& pos = mRigidBody.position;
-	if(mTrack->onTrack(pos + mLBTyreForce.getAttachPosition())) {
+	auto o = -getOrientation();
+	if(mTrack->onTrack(pos + Math::rotate2D(mLBTyreForce.getAttachPosition(), o))) {
 		mLBTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
 	} else {
 		mLBTyreForce.setTyreConfig(mCarConfig.GrassTyres);
 		offroad++;
 	}
-	if(mTrack->onTrack(pos + mRBTyreForce.getAttachPosition())) {
+	if(mTrack->onTrack(pos + Math::rotate2D(mRBTyreForce.getAttachPosition(), o))) {
 		mRBTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
 	} else {
 		mRBTyreForce.setTyreConfig(mCarConfig.GrassTyres);
 		offroad++;
 	}
-	if(mTrack->onTrack(pos + mLFTyreForce.getAttachPosition())) {
+	if(mTrack->onTrack(pos + Math::rotate2D(mLFTyreForce.getAttachPosition(), o))) {
 		mLFTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
 	} else {
 		mLFTyreForce.setTyreConfig(mCarConfig.GrassTyres);
 		offroad++;
 	}
-	if(mTrack->onTrack(pos + mRFTyreForce.getAttachPosition())) {
+	if(mTrack->onTrack(pos + Math::rotate2D(mRFTyreForce.getAttachPosition(), o))) {
 		mRFTyreForce.setTyreConfig(mCarConfig.AsphaltTyres);
 	} else {
 		mRFTyreForce.setTyreConfig(mCarConfig.GrassTyres);
@@ -258,6 +258,12 @@ float Car::getLength() const
 {
 	return mLength;
 }
+
+float Car::getWheelbase() const
+{
+	return mCarConfig.Wheelbase;
+}
+
 
 CarConfig Car::readCarConfig(const char* filename)
 {

@@ -80,6 +80,7 @@ class Car {
 		bool isOffroad() const;
 		float getWidth() const;
 		float getLength() const;
+		float getWheelbase() const;
 
 		static CarConfig readCarConfig(const char* filename);
 
