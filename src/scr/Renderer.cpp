@@ -426,7 +426,7 @@ Text* Renderer::getText(const char* s)
 void Renderer::drawTexts(const GameWorld* w)
 {
 	char buf[128];
-	sprintf(buf, "Speed: %d Km/h", (int)w->getCar()->getSpeed());
+	sprintf(buf, "Speed: %d Km/h", (int)(w->getCar()->getSpeed() * 3.6f));
 	auto text = getText(buf);
 	drawHUDQuad(text->vbo, text->texture.get(), Vector2(10, 10), 0.0f, Common::Color::White);
 
