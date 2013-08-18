@@ -446,7 +446,11 @@ void Renderer::drawTexts(const GameWorld* w)
 	auto text = getText(buf);
 	drawHUDQuad(text->vbo, text->texture.get(), Vector2(10, 10), 0.0f, Common::Color::White);
 
-	int i = 1;
+	sprintf(buf, "Lateral acceleration: %2.1f g", w->getCar()->getLateralAcceleration() / 9.8f);
+	text = getText(buf);
+	drawHUDQuad(text->vbo, text->texture.get(), Vector2(10, 20), 0.0f, Common::Color::White);
+
+	int i = 2;
 	for(const auto& p : mInfoTexts) {
 		auto t = getText(p.c_str());
 		drawHUDQuad(t->vbo, t->texture.get(), Vector2(10, 10 + 10 * i), 0.0f, Common::Color::White);

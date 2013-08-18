@@ -23,6 +23,7 @@ class TyreForce : public Abyss::ForceGenerator {
 		void setBrake(float f);
 		void setTyreConfig(const TyreConfig& tc);
 		const Common::Vector2& getAttachPosition() const;
+		float getLateralAcceleration() const; // in m/s2
 
 	private:
 		Common::Vector2 mAttachPos;
@@ -30,6 +31,7 @@ class TyreForce : public Abyss::ForceGenerator {
 		float mAngle = 0.0f;
 		float mBrake = 0.0f;
 		TyreConfig mTyreConfig;
+		float mLateralAcceleration = 0.0f;
 };
 
 class DragForce : public Abyss::ForceGenerator {
@@ -81,6 +83,7 @@ class Car {
 		float getWidth() const;
 		float getLength() const;
 		float getWheelbase() const;
+		float getLateralAcceleration() const; // in m/s2
 
 		static CarConfig readCarConfig(const char* filename);
 

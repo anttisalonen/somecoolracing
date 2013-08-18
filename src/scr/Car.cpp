@@ -25,6 +25,7 @@ void TyreForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
 	Vector2 tyreDir = Math::rotate2D(spinDir, mAngle);
 	Vector2 velDir = body->velocity.normalized();
 	float speed = body->velocity.length();
+	mLateralAcceleration = 0.0f;
 	if(speed) {
 		// cornering force - lateral
 		auto slipAngle = velDir.cross2d(tyreDir);
@@ -32,6 +33,7 @@ void TyreForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
 
 		latForce = Math::rotate2D(tyreDir, HALF_PI);
 		latForce = latForce * slipAngle * mTyreConfig.mCorneringForceCoefficient;
+		mLateralAcceleration = latForce.length() * body->inverseMass;
 
 		// self aligning torque - force in the direction of the tyre
 		Vector2 selfAlign = tyreDir * speed * mTyreConfig.mSelfAligningTorqueCoefficient;
@@ -56,6 +58,7 @@ void TyreForce::updateForce(Abyss::RigidBody* body, Abyss::Real duration)
 	if(!force.null()) {
 		Vector2 lws = body->getPointInWorldSpace(mAttachPos);
 		body->addForceAtPoint(force, lws);
+		mLateralAcceleration = (force.dot(Math::rotate2D(velDir, HALF_PI))) * body->inverseMass;
 	}
 }
 
@@ -85,6 +88,12 @@ const Common::Vector2& TyreForce::getAttachPosition() const
 {
 	return mAttachPos;
 }
+
+float TyreForce::getLateralAcceleration() const
+{
+	return mLateralAcceleration;
+}
+
 
 DragForce::DragForce(float k1, float k2)
 	: mK1(k1),
@@ -304,5 +313,15 @@ CarConfig Car::readCarConfig(const char* filename)
 	cc.GrassTyres.mBrakeCoefficient               = gt["brakeCoeff"].asDouble();
 
 	return cc;
+}
+
+float Car::getLateralAcceleration() const
+{
+	float ret = 0.0f;
+	ret += mLBTyreForce.getLateralAcceleration();
+	ret += mRBTyreForce.getLateralAcceleration();
+	ret += mLFTyreForce.getLateralAcceleration();
+	ret += mRFTyreForce.getLateralAcceleration();
+	return ret;
 }
 
