@@ -5,7 +5,7 @@
 	"width" : 1.99,         // in m
 	"angularDamping" : 0.2, // strictly 0.1 and 1.0 - recommended between 0.2 and 0.6
 	"wheelbase" : 2.79,     // in m, must be less than length
-	"throttle" : 25000.0,
+	"throttle" : 2500.0,
 	"steeringCoeff" : 0.2,  // strictly between 0.0 and 1.0, recommended 0.2
 	"brake" : 1.0,          // strictly above 0.0, recommended 1.0
 	"dragCoeff" : 1.0,      // drag linear to speed
@@ -29,3 +29,33 @@
 		}
 	},
 }
+
+Problems and solutions:
+Q: like driving on ice - not enough grip
+A: increase selfAligningCoeff and rollingFrictionCoeff
+
+Q: car slows down too much when turning
+A: decrease selfAligningCoeff
+
+Q: can't control the car - keep swinging left and right
+A: decrease steeringCoeff
+
+Q: car accelerates by itself
+A: selfAligningCoeff is more than rollingFrictionCoeff
+
+Q: understeer/too low lateral acceleration
+A: increase corneringCoeff or steeringCoeff
+
+Q: car jitters or becomes unstable when turning at low speed
+A: decrease corneringCoeff
+
+Q: too high top speed
+A: increase drag, reduce throttle, increase selfAligningCoeff and rollingFrictionCoeff
+
+
+Expected metrics for the default cars:
+Name		Top speed	0-100	0-200	0-300	Max g
+Formula		330		1.8	3.8	8.3	5
+Stock		330		8.0			1.5
+Sports		310		4.0			1.2
+Historic rally	160		6.0			1.2
