@@ -18,6 +18,7 @@ class TrackSegment {
 
 		// functions needed by track creation
 		virtual Common::Vector2 getEndPosition() const = 0;
+		virtual float getLength() const = 0;
 };
 
 class StraightTrackSegment : public TrackSegment {
@@ -28,6 +29,7 @@ class StraightTrackSegment : public TrackSegment {
 		virtual bool onTrack(const Common::Vector2& pos) const override;
 		virtual std::vector<Common::Vector2> getTriangleStrip() const override;
 		virtual Common::Vector2 getEndPosition() const override;
+		virtual float getLength() const override;
 
 	private:
 		Common::Vector2 mStartPos;
@@ -47,6 +49,7 @@ class CurveSegment : public TrackSegment {
 		virtual bool onTrack(const Common::Vector2& pos) const override;
 		virtual std::vector<Common::Vector2> getTriangleStrip() const override;
 		virtual Common::Vector2 getEndPosition() const override;
+		virtual float getLength() const override;
 
 		// 0 <= t <= 1
 		Common::Vector2 pointOnCurve(float t) const;

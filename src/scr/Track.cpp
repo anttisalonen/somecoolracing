@@ -49,6 +49,12 @@ Common::Vector2 StraightTrackSegment::getEndPosition() const
 	return mEndPos;
 }
 
+float StraightTrackSegment::getLength() const
+{
+	return mLength;
+}
+
+
 CurveSegment::CurveSegment(const Common::Vector2& startpos,
 		const Common::Vector2& dir,
 		const Common::Vector2& endpos,
@@ -130,6 +136,15 @@ std::vector<Common::Vector2> CurveSegment::getTriangleStrip() const
 Common::Vector2 CurveSegment::getEndPosition() const
 {
 	return mEndPos;
+}
+
+float CurveSegment::getLength() const
+{
+	float len = 0.0f;
+	for(size_t i = 0; i < mApproximations.size() - 1; i++) {
+		len += mApproximations[i].distance(mApproximations[i + 1]);
+	}
+	return len;
 }
 
 Common::Vector2 CurveSegment::pointOnCurve(float t) const
@@ -223,6 +238,13 @@ Track::Track(const TrackConfig* tc)
 			err << "Invalid track - it ends at " << pos << ", facing " << dir << ".\n";
 			throw std::runtime_error(err.str());
 		}
+	}
+
+	{
+		float len = 0.0f;
+		for(const auto& s : mSegments)
+			len += s->getLength();
+		std::cout << "Track length: " << len << " m\n";
 	}
 }
 
