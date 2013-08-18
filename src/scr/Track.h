@@ -48,11 +48,11 @@ class CurveSegment : public TrackSegment {
 		virtual std::vector<Common::Vector2> getTriangleStrip() const override;
 		virtual Common::Vector2 getEndPosition() const override;
 
-	private:
 		// 0 <= t <= 1
 		Common::Vector2 pointOnCurve(float t) const;
 		Common::Vector2 directionOnCurve(float t) const;
 
+	private:
 		Common::Vector2 mStartPos;
 		Common::Vector2 mEndPos;
 		Common::Vector2 mDir;
@@ -64,16 +64,49 @@ class CurveSegment : public TrackSegment {
 		int mNumApproxSegments;
 };
 
+struct TrackConfig {
+	enum class TSType {
+		Straight,
+		Curve
+	};
+
+	struct TSInfo {
+		TSType Type;
+		union {
+			struct {
+				float Length;
+			} StraightInfo;
+			struct {
+				float endOffset_x;
+				float endOffset_y;
+				float endDirection_x;
+				float endDirection_y;
+				float endPosition_x;
+				float endPosition_y;
+			} CurveInfo;
+		} Info;
+	};
+
+	float Width;
+	std::vector<TSInfo> Segments;
+};
+
 class Track {
 	public:
-		Track();
+		Track(const TrackConfig* tc);
 		~Track();
 		const std::vector<TrackSegment*>& getTrackSegments() const;
 		bool onTrack(const Common::Vector2& pos) const;
 		void getLimits(Common::Vector2& bl, Common::Vector2& tr) const;
 
+		static TrackConfig readTrackConfig(const char* filename);
+
 	private:
+		void stretchLimits(const Common::Vector2& trackpos);
+
 		std::vector<TrackSegment*> mSegments;
+		Common::Vector2 mBottomLeft;
+		Common::Vector2 mTopRight;
 };
 
 #endif

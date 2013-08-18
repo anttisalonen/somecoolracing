@@ -3,7 +3,7 @@
 
 class Game {
 	public:
-		bool run(const char* carname);
+		bool run(const char* carname, const char* trackname);
 };
 
 #endif

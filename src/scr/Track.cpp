@@ -2,6 +2,10 @@
 #include <cmath>
 
 #include <stdexcept>
+#include <fstream>
+#include <sstream>
+
+#include <jsoncpp/json/json.h>
 
 #include "common/Math.h"
 
@@ -143,41 +147,83 @@ Common::Vector2 CurveSegment::directionOnCurve(float t) const
 	return ((mP1 - mStartPos) * 2.0f * ti + (mEndPos - mP1) * 2.0f * t).normalized();
 }
 
-Track::Track()
+Track::Track(const TrackConfig* tc)
 {
-	const float width = 20.0f;
-	auto s1 = new StraightTrackSegment(Vector2(0.0f, 0.0f),
-				Vector2(1.0f, 0.0f),
-				200.0f, width);
-	auto s1end = s1->getEndPosition();
+	float width = tc->Width;
+	const Vector2 startpos(0.0f, 0.0f);
+	Vector2 pos = startpos;
+	const Vector2 startdir(1.0f, 0.0f);
+	Vector2 dir = startdir;
+	for(const auto& ts : tc->Segments) {
+		switch(ts.Type) {
+			case TrackConfig::TSType::Straight:
+				{
+					if(!ts.Info.StraightInfo.Length)
+						throw std::runtime_error("Straight segment without length");
+					auto seg = new StraightTrackSegment(pos,
+							dir,
+							ts.Info.StraightInfo.Length,
+							width);
+					pos = seg->getEndPosition();
+					mSegments.push_back(seg);
+					stretchLimits(pos);
+				}
+				break;
 
-	auto s2end = s1end + Vector2(200.0f, 600.0f);
-	auto s2enddir = Vector2(-1.0f, 2.0f).normalized();
-	auto s2 = new CurveSegment(s1end,
-				Vector2(1.0f, 0.0f),
-				s2end,
-				s2enddir,
-				width);
+			case TrackConfig::TSType::Curve:
+				{
+					Vector2 endpos;
+					auto enddir = Vector2(ts.Info.CurveInfo.endDirection_x,
+							ts.Info.CurveInfo.endDirection_y);
+					if(enddir.null()) {
+						throw std::runtime_error("Curve segment without end direction");
+					}
+					enddir.normalize();
+					if(!ts.Info.CurveInfo.endOffset_x &&
+							!ts.Info.CurveInfo.endOffset_y) {
+						endpos.x = ts.Info.CurveInfo.endPosition_x;
+						endpos.y = ts.Info.CurveInfo.endPosition_y;
+					} else {
+						endpos.x = pos.x + ts.Info.CurveInfo.endOffset_x;
+						endpos.y = pos.y + ts.Info.CurveInfo.endOffset_y;
+					}
+					auto seg = new CurveSegment(pos,
+							dir,
+							endpos,
+							enddir,
+							width);
+					pos = seg->getEndPosition();
+					dir = enddir;
+					mSegments.push_back(seg);
+					stretchLimits(seg->pointOnCurve(0.5f));
+					stretchLimits(pos);
+				}
+				break;
+		}
+	}
 
-	auto s3end = s2end + Vector2(-600.0f, 0.0f);
-	auto s3enddir = Vector2(-3.0f, -1.0f).normalized();
-	auto s3 = new CurveSegment(s2end, s2enddir, s3end, s3enddir, width);
-
-	auto s4 = new StraightTrackSegment(s3end, s3enddir, 300.0f, width);
-	auto s4end = s4->getEndPosition();
-
-	auto s5end = Vector2(-600.0f, 0.0f);
-	auto s5enddir = Vector2(1.0f, 0.0f);
-	auto s5 = new CurveSegment(s4end, s3enddir, s5end, s5enddir, width);
-
-	auto s6 = new StraightTrackSegment(s5end, s5enddir, -s5end.x, width);
-
-	mSegments.push_back(s1);
-	mSegments.push_back(s2);
-	mSegments.push_back(s3);
-	mSegments.push_back(s4);
-	mSegments.push_back(s5);
-	mSegments.push_back(s6);
+	if(pos.distance(startpos) > 0.00001f) {
+		if(fabs(dir.angleTo(startdir)) < 0.00001f) {
+			std::cout << "Finishing track with a straight segment.\n";
+			auto seg = new StraightTrackSegment(pos,
+					dir,
+					pos.distance(startpos),
+					width);
+			mSegments.push_back(seg);
+		} else if(fabs(dir.angleTo(startdir)) < HALF_PI) {
+			std::cout << "Finishing track with a curve segment.\n";
+			auto seg = new CurveSegment(pos,
+					dir,
+					startpos,
+					startdir,
+					width);
+			mSegments.push_back(seg);
+		} else {
+			std::stringstream err;
+			err << "Invalid track - it ends at " << pos << ", facing " << dir << ".\n";
+			throw std::runtime_error(err.str());
+		}
+	}
 }
 
 Track::~Track()
@@ -203,9 +249,52 @@ bool Track::onTrack(const Common::Vector2& pos) const
 
 void Track::getLimits(Common::Vector2& bl, Common::Vector2& tr) const
 {
-	bl.x = -2000.0;
-	bl.y = -2000.0;
-	tr.x = 2000.0;
-	tr.y = 2000.0;
+	bl = mBottomLeft;
+	tr = mTopRight;
 }
+
+void Track::stretchLimits(const Common::Vector2& trackpos)
+{
+	mBottomLeft.x = std::min<float>(mBottomLeft.x, trackpos.x - 200.0f);
+	mBottomLeft.y = std::min<float>(mBottomLeft.y, trackpos.y - 200.0f);
+	mTopRight.x   = std::max<float>(mTopRight.x,   trackpos.x + 200.0f);
+	mTopRight.y   = std::max<float>(mTopRight.y,   trackpos.y + 200.0f);
+}
+
+TrackConfig Track::readTrackConfig(const char* filename)
+{
+	Json::Reader reader;
+	Json::Value root;
+
+	std::ifstream input(filename, std::ifstream::binary);
+	bool parsingSuccessful = reader.parse(input, root, false);
+	if (!parsingSuccessful) {
+		throw std::runtime_error(reader.getFormatedErrorMessages());
+	}
+
+	TrackConfig tc;
+	tc.Width = root["width"].asDouble();
+	for(const auto& seg : root["segments"]) {
+		TrackConfig::TSInfo info;
+		std::string type = seg["type"].asString();
+		if(seg["type"] == "straight") {
+			info.Type = TrackConfig::TSType::Straight;
+			info.Info.StraightInfo.Length = seg["length"].asDouble();
+		} else if(seg["type"] == "curve") {
+			info.Type = TrackConfig::TSType::Curve;
+			info.Info.CurveInfo.endOffset_x = seg["endOffset"][0u].asDouble();
+			info.Info.CurveInfo.endOffset_y = seg["endOffset"][1u].asDouble();
+			info.Info.CurveInfo.endPosition_x = seg["endPosition"][0u].asDouble();
+			info.Info.CurveInfo.endPosition_y = seg["endPosition"][1u].asDouble();
+			info.Info.CurveInfo.endDirection_x = seg["endDirection"][0u].asDouble();
+			info.Info.CurveInfo.endDirection_y = seg["endDirection"][1u].asDouble();
+		} else {
+			throw std::runtime_error("Unknown segment type!");
+		}
+		tc.Segments.push_back(info);
+	}
+
+	return tc;
+}
+
 

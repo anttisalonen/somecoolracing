@@ -12,7 +12,7 @@
 class GameDriver : public Common::Driver {
 	public:
 		GameDriver(unsigned int screenWidth, unsigned int screenHeight,
-				const char* caption, const char* carname);
+				const char* caption, const char* carname, const char* trackname);
 		bool init() override;
 		bool prerenderUpdate(float frameTime) override;
 		void drawFrame() override;

@@ -7,7 +7,7 @@
 
 class GameWorld {
 	public:
-		GameWorld(const char* carname);
+		GameWorld(const char* carname, const char* trackname);
 		~GameWorld();
 		void updatePhysics(float time);
 		const Car* getCar() const;
@@ -17,7 +17,7 @@ class GameWorld {
 
 	private:
 		Abyss::World mPhysicsWorld;
-		Track mTrack;
+		Track* mTrack = nullptr;
 		Car* mCar = nullptr;
 };
 

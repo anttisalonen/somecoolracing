@@ -3,9 +3,9 @@
 #include "common/Math.h"
 
 GameDriver::GameDriver(unsigned int screenWidth, unsigned int screenHeight,
-		const char* caption, const char* carname)
+		const char* caption, const char* carname, const char* trackname)
 	: Driver(screenWidth, screenHeight, caption),
-	mWorld(carname),
+	mWorld(carname, trackname),
 	mRenderer(screenWidth, screenHeight),
 	mDebugDisplay(0.2f)
 {

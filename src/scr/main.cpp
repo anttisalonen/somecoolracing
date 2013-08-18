@@ -50,16 +50,17 @@ void test_abyss_rigid_bodies()
 	}
 }
 
-int run_game(const char* carname)
+int run_game(const char* carname, const char* trackname)
 {
 	Game g;
-	g.run(carname);
+	g.run(carname, trackname);
 	return 0;
 }
 
 int main(int argc, char** argv)
 {
 	const char* carname = "stock_car";
+	const char* trackname = "simple";
 	for(int i = 0; i < argc; i++) {
 		if(!strcmp(argv[i], "-t")) {
 			test_abyss_rigid_bodies();
@@ -71,10 +72,17 @@ int main(int argc, char** argv)
 				return 1;
 			}
 			carname = argv[i];
+		} else if(!strcmp(argv[i], "--track")) {
+			i++;
+			if(i == argc) {
+				std::cerr << "--track requires an argument.\n";
+				return 1;
+			}
+			trackname = argv[i];
 		}
 	}
 
-	run_game(carname);
+	run_game(carname, trackname);
 
 	return 0;
 }

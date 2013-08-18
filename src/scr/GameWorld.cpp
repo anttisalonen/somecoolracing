@@ -1,14 +1,19 @@
 #include "GameWorld.h"
 
-GameWorld::GameWorld(const char* carname)
+GameWorld::GameWorld(const char* carname, const char* trackname)
 {
+	std::string trackconfig = "share/tracks/" + std::string(trackname) + ".conf";
+	auto trackConfig = Track::readTrackConfig(trackconfig.c_str());
+	mTrack = new Track(&trackConfig);
+
 	std::string carconfig = "share/cars/" + std::string(carname) + ".conf";
 	auto carConfig = Car::readCarConfig(carconfig.c_str());
-	mCar = new Car(&carConfig, &mPhysicsWorld, &mTrack);
+	mCar = new Car(&carConfig, &mPhysicsWorld, mTrack);
 }
 
 GameWorld::~GameWorld()
 {
+	delete mTrack;
 	delete mCar;
 }
 
@@ -21,7 +26,7 @@ void GameWorld::updatePhysics(float time)
 	{
 		auto carpos = mCar->getPosition();
 		Common::Vector2 bl, tr;
-		mTrack.getLimits(bl, tr);
+		mTrack->getLimits(bl, tr);
 		if(carpos.x < bl.x || carpos.y < bl.y ||
 				carpos.x > tr.x || carpos.y > tr.y) {
 			mCar->setPosition(Common::Vector2());
@@ -42,7 +47,7 @@ const Car* GameWorld::getCar() const
 
 const Track* GameWorld::getTrack() const
 {
-	return &mTrack;
+	return mTrack;
 }
 
 void GameWorld::resetCar()
