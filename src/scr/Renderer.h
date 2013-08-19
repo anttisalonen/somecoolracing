@@ -52,10 +52,11 @@ class Renderer {
 		void cleanup();
 
 		float setZoom(float z);
+		void toggleAutoZoom();
 		void setSteering(float throttle, float brake, float steering);
 		void toggleDebugDisplay();
 		void updateDebug(const GameWorld* w);
-		void setCamOrientation(bool o);
+		void toggleCamOrientation();
 
 	private:
 		bool initGL();
@@ -106,13 +107,16 @@ class Renderer {
 		Common::TextRenderer mTextRenderer;
 
 		float mZoom = 0.01f;
+		float mAutoZoom = 1.0f;
 		std::map<boost::shared_ptr<Common::Texture>, Text*> mTextCache;
 
 		std::vector<std::string> mInfoTexts;
 		float mScreenOrientation = 0.0f;
-		bool mCamOrientation = false;
+		bool mCamOrientation = true;
 		bool mDebugDisplay = false;
+		bool mAutoZoomEnabled = true;
 };
+
 
 #endif
 

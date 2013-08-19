@@ -86,8 +86,7 @@ bool GameDriver::handleKeyDown(float frameTime, SDLKey key)
 			break;
 
 		case SDLK_c:
-			mCamOrientation = !mCamOrientation;
-			mRenderer.setCamOrientation(mCamOrientation);
+			mRenderer.toggleCamOrientation();
 			break;
 
 		case SDLK_SPACE:
@@ -102,6 +101,10 @@ bool GameDriver::handleKeyDown(float frameTime, SDLKey key)
 		case SDLK_MINUS:
 		case SDLK_KP_MINUS:
 			mZoomSpeed = 1.0f;
+			break;
+
+		case SDLK_o:
+			mRenderer.toggleAutoZoom();
 			break;
 
 		case SDLK_r:

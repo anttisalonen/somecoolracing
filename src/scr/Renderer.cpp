@@ -311,7 +311,14 @@ void Renderer::drawFrame(const GameWorld* w)
 	}
 
 	auto carpos = car->getPosition();
-	glUniform1f(mZoomUniform, mZoom);
+	if(mAutoZoomEnabled) {
+		auto s = std::max<float>(5, car->getSpeed());
+		mAutoZoom = 0.5f + 0.0001f * s * s;
+	} else {
+		mAutoZoom = 1.0f;
+	}
+
+	glUniform1f(mZoomUniform, mZoom * mAutoZoom);
 
 	mCamPos.x = carpos.x;
 	mCamPos.y = carpos.y;
@@ -558,14 +565,19 @@ GLuint Renderer::loadProgram(const char* vertfilename, const char* fragfilename,
 	return programobj;
 }
 
-void Renderer::setCamOrientation(bool o)
+void Renderer::toggleCamOrientation()
 {
-	mCamOrientation = o;
+	mCamOrientation = !mCamOrientation;
 }
 
 void Renderer::toggleDebugDisplay()
 {
 	mDebugDisplay = !mDebugDisplay;
+}
+
+void Renderer::toggleAutoZoom()
+{
+	mAutoZoomEnabled = !mAutoZoomEnabled;
 }
 
 
