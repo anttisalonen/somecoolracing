@@ -33,9 +33,9 @@ void DebugPointer::add(const Common::Vector2& pos, const Common::Color& col)
 		glGenBuffers(3, p.VBO);
 
 		GLfloat vertices[] = {0.1f, 0.1f,
-			0.1f, -0.1f,
-			-0.1f, 0.1f,
-			-0.1f, -0.1f};
+			0.1f, 0.5f, -0.1f,
+			-0.1f, 0.5f, 0.1f,
+			-0.1f, 0.5f, -0.1f};
 		GLfloat texcoord[] = {1.0f, 0.0f,
 			1.0f, 1.0f,
 			0.0f, 0.0f,
@@ -116,28 +116,21 @@ bool Renderer::init()
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_TEXTURE_2D);
 
-	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glActiveTexture(GL_TEXTURE0);
 
-	mCarProgram = loadProgram("share/car.vert", "share/car.frag", {{0, "aPosition"}, {1, "aTexcoord"}});
-	mCameraUniform  = glGetUniformLocation(mCarProgram, "uCamera");
-	mOrientationUniform  = glGetUniformLocation(mCarProgram, "uOrientation");
-	mZoomUniform    = glGetUniformLocation(mCarProgram, "uZoom");
-	mRightUniform   = glGetUniformLocation(mCarProgram, "uRight");
-	mTopUniform     = glGetUniformLocation(mCarProgram, "uTop");
-	mTextureUniform = glGetUniformLocation(mCarProgram, "sTexture");
-	mColorUniform   = glGetUniformLocation(mCarProgram, "uColor");
-	glUseProgram(mCarProgram);
-
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-
+	mCarProgram = loadProgram("share/car.vert", "share/car.frag", {{0, "aPosition"}, {1, "aTexCoord"}});
+	mHUDProgram = loadProgram("share/hud.vert", "share/hud.frag", {{0, "aPosition"}, {1, "aTexCoord"}});
 	glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
 
 	loadTextures();
 	loadDebugVBO();
+
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	setSceneDrawMode();
+	glDepthFunc(GL_LEQUAL);
 
 	bool error = false;
 	{
@@ -149,6 +142,34 @@ bool Renderer::init()
 	}
 
 	return !error;
+}
+
+void Renderer::setSceneDrawMode()
+{
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(0);
+	glUseProgram(mCarProgram);
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glUniform1i(glGetUniformLocation(mCarProgram, "sTexture"), 0);
+}
+
+void Renderer::setHUDDrawMode()
+{
+	glDisableVertexAttribArray(1);
+	glDisableVertexAttribArray(0);
+	glUseProgram(mHUDProgram);
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glUniform1f(glGetUniformLocation(mHUDProgram, "uOrientation"), 0.0f);
+	glUniform1f(glGetUniformLocation(mHUDProgram, "uZoom"), 1.0f);
+	glUniform1f(glGetUniformLocation(mHUDProgram, "uRight"), mWidth);
+	glUniform1f(glGetUniformLocation(mHUDProgram, "uTop"), mHeight);
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glUniform1i(glGetUniformLocation(mHUDProgram, "sTexture"), 0);
 }
 
 float Renderer::setZoom(float z)
@@ -179,10 +200,10 @@ void Renderer::loadTextures()
 void Renderer::loadCarVBO(const Car* car)
 {
 	float w = car->getLength();
-	GLfloat vertices[] = {w, w,
-		w, -w,
-		-w, w,
-		-w, -w};
+	GLfloat vertices[] = {w, 0.0f, w,
+		w, 0.0f, -w,
+		-w, 0.0f, w,
+		-w, 0.0f, -w};
 	GLfloat texcoord[] = {1.0f, 0.0f,
 		1.0f, 1.0f,
 		0.0f, 0.0f,
@@ -209,10 +230,10 @@ void Renderer::loadGrassVBO(const Track* t)
 {
 	Common::Vector2 bl, tr;
 	t->getLimits(bl, tr);
-	GLfloat vertices[] = {tr.x, tr.y,
-		tr.x, bl.y,
-		bl.x, tr.y,
-		bl.x, bl.y};
+	GLfloat vertices[] = {tr.x, 0.0f, tr.y,
+		tr.x, 0.0f, bl.y,
+		bl.x, 0.0f, tr.y,
+		bl.x, 0.0f, bl.y};
 	const float texScale = 0.1f;
 	GLfloat texcoord[] = {tr.x * texScale, bl.y * texScale,
 		tr.x * texScale, tr.y * texScale,
@@ -251,6 +272,7 @@ void Renderer::loadTrackVBO(const Track* t)
 		std::vector<GLfloat> texcoorddata;
 		for(const auto& t : triStrip) {
 			vertexdata.push_back(t.x);
+			vertexdata.push_back(-0.1f);
 			vertexdata.push_back(t.y);
 			texcoorddata.push_back(t.x * 0.08f);
 			texcoorddata.push_back(t.y * 0.08f);
@@ -292,15 +314,115 @@ void Renderer::cleanup()
 	}
 }
 
+Matrix44 Renderer::rotationVectorToMatrix(const Vector2& rot)
+{
+	Matrix44 ret;
+	float theta = atan2(rot.y, rot.x);
+	float ct = cos(theta);
+	float st = sin(theta);
+	// rotation around Y
+	ret.m[0] = ct;
+	ret.m[2] = -st;
+	ret.m[8] = st;
+	ret.m[10] = ct;
+	return ret;
+}
+
+void Renderer::calculateModelMatrix(const Vector2& pos, const Vector2& rot,
+		Matrix44& modelMatrix, Matrix44& inverseModelMatrix)
+{
+	Matrix44 translation = translationMatrix(Vector3(pos.x, 0.0f, pos.y));
+	Matrix44 rotation = rotationVectorToMatrix(rot);
+	modelMatrix = rotation * translation;
+
+	auto invTranslation(translation);
+	invTranslation.m[3] = -invTranslation.m[3];
+	invTranslation.m[7] = -invTranslation.m[7];
+	invTranslation.m[11] = -invTranslation.m[11];
+
+	auto invRotation = rotation.transposed();
+
+	inverseModelMatrix = invTranslation * invRotation;
+}
+
+void Renderer::updateMVPMatrix(const Vector2& pos, const Vector2& rot)
+{
+	Matrix44 modelMatrix, inverseModelMatrix;
+	calculateModelMatrix(pos, rot, modelMatrix, inverseModelMatrix);
+	auto mvp = modelMatrix * mViewMatrix * mPerspectiveMatrix;
+
+	// TODO: naming of inverseMVP is misleading
+	glUniformMatrix4fv(glGetUniformLocation(mCarProgram, "uMVP"), 1, GL_FALSE, mvp.m);
+	glUniformMatrix4fv(glGetUniformLocation(mCarProgram, "uInverseMVP"), 1, GL_FALSE, inverseModelMatrix.m);
+}
+
+Matrix44 Renderer::perspectiveMatrix(float fov, int screenwidth, int screenheight)
+{
+	const float aspect_ratio = screenwidth / screenheight;
+	const float znear = 0.5f;
+	const float zfar = 500.0f;
+	const float h = 1.0 / tan(Math::degreesToRadians(fov * 0.5f));
+	const float neg_depth = znear - zfar;
+
+	Matrix44 pers = Matrix44::Identity;
+	pers.m[0 * 4 + 0] = h / aspect_ratio;
+	pers.m[1 * 4 + 1] = h;
+	pers.m[2 * 4 + 2] = (zfar + znear) / neg_depth;
+	pers.m[2 * 4 + 3] = -1.0;
+	pers.m[3 * 4 + 2] = 2.0 * zfar * znear / neg_depth;
+	pers.m[3 * 4 + 3] = 0.0;
+	return pers;
+}
+
+Matrix44 Renderer::translationMatrix(const Vector3& v)
+{
+	Matrix44 translation = Matrix44::Identity;
+	translation.m[3 * 4 + 0] = v.x;
+	translation.m[3 * 4 + 1] = v.y;
+	translation.m[3 * 4 + 2] = v.z;
+	return translation;
+}
+
+Matrix44 Renderer::cameraRotationMatrix(const Vector3& tgt, const Vector3& up)
+{
+	Vector3 n(tgt.negated().normalized());
+	auto u = up.normalized().cross(n);
+	auto v = n.cross(u);
+	auto m = Matrix44::Identity;
+	m.m[0] = u.x;
+	m.m[1] = v.x;
+	m.m[2] = n.x;
+	m.m[4] = u.y;
+	m.m[5] = v.y;
+	m.m[6] = n.y;
+	m.m[8] = u.z;
+	m.m[9] = v.z;
+	m.m[10] = n.z;
+
+	return m;
+}
+
+void Renderer::updateFrameMatrices(const Vector2& pos, const Vector2& dir)
+{
+	mPerspectiveMatrix = perspectiveMatrix(90.0f, mWidth, mHeight);
+	// TODO: why is up at 0, -1, 0?
+	auto camrot = cameraRotationMatrix(Vector3(dir.x, 0.0f, dir.y), Vector3(0.0f, -1.0f, 0.0f));
+	// camera height is set here
+	auto camtrans = translationMatrix(Vector3(-pos.x, 1.0f, -pos.y));
+	mViewMatrix = camtrans * camrot;
+}
+
 void Renderer::drawFrame(const GameWorld* w)
 {
 	glViewport(0, 0, mWidth, mHeight);
-	glUniform1f(mRightUniform, mWidth);
-	glUniform1f(mTopUniform, mHeight);
-	glUniform1i(mTextureUniform, 0);
+	setSceneDrawMode();
+
+	auto car = w->getCar();
+	updateFrameMatrices(mCamPos, car->getBody()->orientation);
+
+	glUniform3f(glGetUniformLocation(mCarProgram, "uAmbientLight"), 1.0f, 1.0f, 1.0f);
 
 	auto track = w->getTrack();
-	auto car = w->getCar();
 
 	mScreenOrientation = mCamOrientation ? car->getOrientation() : 0.0f;
 
@@ -318,18 +440,16 @@ void Renderer::drawFrame(const GameWorld* w)
 		mAutoZoom = 1.0f;
 	}
 
-	glUniform1f(mZoomUniform, mZoom * mAutoZoom);
-
 	mCamPos.x = carpos.x;
 	mCamPos.y = carpos.y;
 
-	drawGrass();
 	drawTrack();
-	drawCar(car);
+	drawGrass();
+	//drawCar(car);
 	if(mDebugDisplay)
 		drawDebugPoints();
-	
-	glUniform1f(mZoomUniform, 1.0f);
+
+	setHUDDrawMode();
 	drawTexts(w);
 
 	{
@@ -377,13 +497,11 @@ void Renderer::drawCar(const Car* car)
 void Renderer::drawTrackSegment(const TSRender& ts)
 {
 	glBindTexture(GL_TEXTURE_2D, mAsphaltTexture->getTexture());
-	auto cam = Math::rotate2D(mCamPos, mScreenOrientation);
-	glUniform2f(mCameraUniform, -cam.x, -cam.y);
-	glUniform1f(mOrientationUniform, -mScreenOrientation);
-	glUniform4f(mColorUniform, 1.0f, 1.0f, 1.0f, 1.0f);
+	updateMVPMatrix(Vector2(0.0f, 0.0f), Vector2(1.0f, 0.0f));
+	glUniform4f(glGetUniformLocation(mCarProgram, "uColor"), 1.0f, 1.0f, 1.0f, 1.0f);
 
 	glBindBuffer(GL_ARRAY_BUFFER, ts.VBO[0]);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 	glBindBuffer(GL_ARRAY_BUFFER, ts.VBO[1]);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
@@ -412,20 +530,19 @@ void Renderer::drawDebugPoints()
 
 void Renderer::drawQuad(const GLuint vbo[3],
 		const Common::Texture* texture, const Common::Vector2& pos,
-		float orient, const Common::Color& col, bool isHud)
+		float orient, const Common::Color& col)
 {
 	glBindTexture(GL_TEXTURE_2D, texture->getTexture());
-	auto cam = isHud ? mCamPos : Math::rotate2D(mCamPos, mScreenOrientation);
-	auto rotpos = isHud ? pos : Math::rotate2D(pos, mScreenOrientation);
-	glUniform2f(mCameraUniform, -cam.x + rotpos.x, -cam.y + rotpos.y);
-	if(isHud)
-		glUniform1f(mOrientationUniform, 0.0f);
-	else
-		glUniform1f(mOrientationUniform, orient - mScreenOrientation);
-	glUniform4f(mColorUniform, col.r / 255.0f, col.g / 255.0f, col.b / 255.0f, 1.0f);
+	Vector2 rot;
+
+	rot.x = cos(orient);
+	rot.y = sin(orient);
+
+	updateMVPMatrix(pos, rot);
+	glUniform4f(glGetUniformLocation(mCarProgram, "uColor"), col.r / 255.0f, col.g / 255.0f, col.b / 255.0f, 1.0f);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
@@ -451,26 +568,36 @@ void Renderer::drawTexts(const GameWorld* w)
 	char buf[128];
 	sprintf(buf, "Speed: %d Km/h", (int)(w->getCar()->getSpeed() * 3.6f));
 	auto text = getText(buf);
-	drawHUDQuad(text->vbo, text->texture.get(), Vector2(10, 10), 0.0f, Common::Color::White);
+	drawHUDQuad(text->vbo, text->texture.get(), Vector2(10, 10), Common::Color::White);
 
 	sprintf(buf, "Lateral acceleration: %2.1f g", w->getCar()->getLateralAcceleration() / 9.8f);
 	text = getText(buf);
-	drawHUDQuad(text->vbo, text->texture.get(), Vector2(10, 20), 0.0f, Common::Color::White);
+	drawHUDQuad(text->vbo, text->texture.get(), Vector2(10, 20), Common::Color::White);
 
 	int i = 2;
 	for(const auto& p : mInfoTexts) {
 		auto t = getText(p.c_str());
-		drawHUDQuad(t->vbo, t->texture.get(), Vector2(10, 10 + 10 * i), 0.0f, Common::Color::White);
+		drawHUDQuad(t->vbo, t->texture.get(), Vector2(mWidth - 100, mHeight - 10 - 10 * i), Common::Color::White);
 		i++;
 	}
 }
 
 void Renderer::drawHUDQuad(const GLuint vbo[3],
 		const Common::Texture* texture, const Common::Vector2& pos,
-		float orient, const Common::Color& col)
+		const Common::Color& col)
 {
-	drawQuad(vbo, texture, mCamPos + Vector2(mWidth, mHeight) * -1.0f + pos * 2.0f,
-			-mScreenOrientation + orient, col, true);
+	glBindTexture(GL_TEXTURE_2D, texture->getTexture());
+	Vector2 rot = pos * 2.0f - Vector2(mWidth, mHeight);
+	glUniform2f(glGetUniformLocation(mHUDProgram, "uCamera"), rot.x, rot.y);
+	glUniform4f(glGetUniformLocation(mHUDProgram, "uColor"), col.r / 255.0f, col.g / 255.0f, col.b / 255.0f, 1.0f);
+
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[2]);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
 }
 
 GLuint Renderer::loadShader(const char* src, GLenum type)

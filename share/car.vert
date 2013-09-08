@@ -1,31 +1,20 @@
-attribute vec4 aPosition;
-attribute vec2 aTexcoord;
+attribute vec3 aPosition;
+attribute vec2 aTexCoord;
+attribute vec3 aNormal;
 
-varying vec2 vTexcoord;
+uniform mat4 uMVP;
+uniform mat4 uInverseMVP;
+uniform vec3 uPointLightPosition;
 
-uniform vec2 uCamera;
-uniform float uOrientation;
-uniform float uRight;
-uniform float uTop;
-uniform float uZoom;
+varying vec2 vTexCoord;
+varying vec3 vNormal;
+varying float vPointLightDistance;
 
 void main()
 {
-	float right  = uRight * uZoom;
-	float left   = -uRight * uZoom;
-	float top    = uTop * uZoom;
-	float bottom = -uTop * uZoom;
-	const float far    = 1.0;
-	const float near   = -1.0;
-	vTexcoord = aTexcoord;
-	mat4 window_scale = mat4(vec4(2.0 / (right - left), 0.0, 0.0, 0.0),
-		vec4(0.0, 2.0 / (top - bottom), 0.0, 0.0),
-		vec4(0.0, 0.0, -2.0 / (far - near), 0.0),
-		vec4(-(right + left) / (right - left), -(top + bottom) / (top - bottom), -(far + near) / (far - near), 1.0));
-	float rots = sin(uOrientation);
-	float rotc = cos(uOrientation);
-	mat2 rot_matrix = mat2(rotc, -rots, rots, rotc);
-	vec2 pos = rot_matrix * aPosition.xy + uCamera;
-	vec4 finpos = vec4(pos, aPosition.z, aPosition.w);
-	gl_Position = window_scale * finpos;
+	gl_Position = uMVP * vec4(aPosition, 1.0);
+	vTexCoord = aTexCoord;
+	vNormal = vec3(vec4(aNormal, 1.0) * uInverseMVP);
+	vPointLightDistance = distance(aPosition, uPointLightPosition);
 }
+

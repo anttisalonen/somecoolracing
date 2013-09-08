@@ -205,6 +205,11 @@ Abyss::RigidBody* Car::getBody()
 	return &mRigidBody;
 }
 
+const Abyss::RigidBody* Car::getBody() const
+{
+	return &mRigidBody;
+}
+
 void Car::setBrake(float value)
 {
 	assert(value >= 0.0f && value <= 1.0f);

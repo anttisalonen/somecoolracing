@@ -10,7 +10,9 @@
 
 #include "common/Texture.h"
 #include "common/Vector2.h"
+#include "common/Vector3.h"
 #include "common/TextRenderer.h"
+#include "common/Matrix44.h"
 
 #include "GameWorld.h"
 #include "Car.h"
@@ -71,10 +73,10 @@ class Renderer {
 		void drawGrass();
 		void drawQuad(const GLuint vbo[3],
 				const Common::Texture* texture, const Common::Vector2& pos,
-				float orient, const Common::Color& col, bool isHud = false);
+				float orient, const Common::Color& col);
 		void drawHUDQuad(const GLuint vbo[3],
 				const Common::Texture* texture, const Common::Vector2& pos,
-				float orient, const Common::Color& col);
+				const Common::Color& col);
 		void drawTrackSegment(const TSRender& ts);
 		void drawDebugPoints();
 		void drawTexts(const GameWorld* w);
@@ -85,20 +87,25 @@ class Renderer {
 		GLuint loadShader(const char* src, GLenum type);
 		std::string loadTextFile(const char* filename);
 
+		static Common::Matrix44 rotationVectorToMatrix(const Common::Vector2& rot);
+		static void calculateModelMatrix(const Common::Vector2& pos, const Common::Vector2& rot,
+				Common::Matrix44& modelMatrix, Common::Matrix44& inverseModelMatrix);
+		void updateMVPMatrix(const Common::Vector2& pos, const Common::Vector2& rot);
+		static Common::Matrix44 perspectiveMatrix(float fov, int screenwidth, int screenheight);
+		static Common::Matrix44 translationMatrix(const Common::Vector3& v);
+		static Common::Matrix44 cameraRotationMatrix(const Common::Vector3& tgt, const Common::Vector3& up);
+		void updateFrameMatrices(const Common::Vector2& pos, const Common::Vector2& dir);
+		void setSceneDrawMode();
+		void setHUDDrawMode();
+
 		Common::Texture* mCarTexture = nullptr;
 		Common::Texture* mAsphaltTexture = nullptr;
 		Common::Texture* mGrassTexture = nullptr;
 		int mWidth;
 		int mHeight;
 		Common::Vector2 mCamPos;
-		GLuint mCameraUniform;
-		GLuint mOrientationUniform;
-		GLuint mZoomUniform;
-		GLuint mRightUniform;
-		GLuint mTopUniform;
-		GLuint mTextureUniform;
-		GLuint mColorUniform;
 		GLuint mCarProgram;
+		GLuint mHUDProgram;
 		GLuint mCarVBO[3];
 		GLuint mGrassVBO[3];
 
@@ -115,6 +122,9 @@ class Renderer {
 		bool mCamOrientation = true;
 		bool mDebugDisplay = false;
 		bool mAutoZoomEnabled = true;
+
+		Common::Matrix44 mViewMatrix;
+		Common::Matrix44 mPerspectiveMatrix;
 };
 
 

@@ -78,6 +78,7 @@ class Car {
 		void setBrake(float value);
 		void setSteering(float value);
 		Abyss::RigidBody* getBody();
+		const Abyss::RigidBody* getBody() const;
 		void moved();
 		bool isOffroad() const;
 		float getWidth() const;
